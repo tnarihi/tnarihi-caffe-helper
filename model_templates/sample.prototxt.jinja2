@@ -3,6 +3,11 @@
 {% import 'fc_unit.macro' as fc_unit %}
 name: "bvlc_sample"
 
+input: "data"
+input_dim: 10
+input_dim: 3
+input_dim: 227
+input_dim: 227
 
 {{bvlc_convolutions.bvlc_convolutions('data')}}
 {{bvlc_fcs.bvlc_fcs('conv5-pool')}}
