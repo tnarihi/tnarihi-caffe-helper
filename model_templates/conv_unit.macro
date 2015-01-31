@@ -8,7 +8,7 @@
   pool_kernel=3, pool_stride=2,
   no_pool=false, no_norm=false)
 %}
-{% set conv_name = unit_name + '-conv' %}
+{% set conv_name = unit_name %}
 {% set relu_name = unit_name + '-relu' %}
 {% set pool_name = unit_name + '-pool' %}
 {% set norm_name = unit_name + '-norm' %}

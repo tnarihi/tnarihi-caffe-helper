@@ -11,18 +11,20 @@
 	stride=[4, 1, 1, 1, 1],
 	pad=[0, 2, 1, 1, 1],
 	group=[1, 2, 1, 2, 2],
+	w_std=[0.01,0.01,0.01,0.01,0.01],
 	b_value=[0, 1, 0, 0, 1],
 	pool_kernel=[3, 3, 0, 0, 3],
 	pool_stride=[2, 2, 0, 0, 2],
 	no_pool=[false, false, true, true, false],
 	no_norm=[false, false, true, true, true],
-	end=5)
+	start=1, last=5)
 %}
-{% for i in range(end) %}
-{% set conv_name = 'conv%d'|format(i+1) %}
-{% set prev_conv_name = 'conv%d'|format(i) %}
+{% for j in range(start-1, last) %}
+{% set i = j - (start-1) %}
+{% set conv_name = 'conv%d'|format(j+1) %}
+{% set prev_conv_name = 'conv%d'|format(j) %}
 {% if i == 0 %}{% set input = input_name %}
-{% elif no_norm[i-1] and no_pool[i-1] %}{% set input = prefix + prev_conv_name + '-conv' %}
+{% elif no_norm[i-1] and no_pool[i-1] %}{% set input = prefix + prev_conv_name %}
 {% elif no_norm[i-1] %}{% set input = prefix + prev_conv_name + '-pool' %}
 {% else %}{% set input = prefix + prev_conv_name + '-norm' %}
 {% endif %}
@@ -32,7 +34,8 @@
 		lr_w=lr[i]*1, lr_b=lr[i]*2, wd_w=wd[i],
 		channels=channels[i], kernel=kernel[i], stride=stride[i],
 		group=group[i], pad=pad[i],
-		b_filler={"type": '"constant"', "value": b_value[i]},
+		w_filler={"type": '"gaussian"', "std": w_std[i]},
+  		b_filler={"type": '"constant"', "value": b_value[i]},
 		param_name=param_prefix + conv_name,
 		pool_kernel=pool_kernel[i], pool_stride=pool_stride[i],
 		no_pool=no_pool[i], no_norm=no_norm[i])
