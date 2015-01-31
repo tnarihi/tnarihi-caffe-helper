@@ -1,6 +1,6 @@
 {% import 'conv_unit.macro' as conv_unit %}
 
-{% macro bvlc_conv1_5(
+{% macro bvlc_convolutions(
 	input_name,
 	prefix='',
 	param_prefix='',
