@@ -1,0 +1,44 @@
+{% macro fc_unit(
+  input_name, unit_name,
+  lr_w=1, lr_b=2, wd_w=1, wd_b=0,
+  num=64,
+  w_filler={"type": '"gaussian"', "std": 0.005},
+  b_filler={"type": '"constant"', "value": 1},
+  param_name=none, no_relu=false)
+%}
+{% set fc_name = unit_name %}
+{% set relu_name = unit_name + '-relu' %}
+layers {
+  name: "{{fc_name}}"
+  type: INNER_PRODUCT
+  bottom: "{{input_name}}"
+  top: "{{fc_name}}"
+  blobs_lr: {{lr_w}}
+  blobs_lr: {{lr_b}}
+  weight_decay: {{wd_w}}
+  weight_decay: {{wd_b}}
+  inner_product_param {
+    num_output: {{num}}
+    weight_filler {
+      {% for key, val in w_filler.iteritems() %}{{ key }}: {{ val }}
+      {% endfor %}
+    }
+    bias_filler {
+      {% for key, val in b_filler.iteritems() %}{{ key }}: {{ val }}
+      {% endfor %}
+    }
+  }
+  {% if param_name is not none %}
+  param: "{{ param_name }}_w"
+  param: "{{ param_name }}_b"
+  {% endif %}
+}
+{% if not no_relu %}
+layers {
+  name: "{{relu_name}}"
+  type: RELU
+  bottom: "{{fc_name}}"
+  top: "{{fc_name}}"
+}
+{% endif %}
+{% endmacro %}

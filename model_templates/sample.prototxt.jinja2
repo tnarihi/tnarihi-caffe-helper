@@ -1,10 +1,13 @@
 {% import 'bvlc_convolutions.macro' as bvlc_convolutions %}
-name: "bvlc_convolution_sample"
+{% import 'bvlc_fcs.macro' as bvlc_fcs %}
+{% import 'fc_unit.macro' as fc_unit %}
+name: "bvlc_sample"
 
+
+{{bvlc_convolutions.bvlc_convolutions('data')}}
+{{bvlc_fcs.bvlc_fcs('conv5-pool')}}
 {{
-	bvlc_convolutions.bvlc_convolutions(
-		'data',
-		lr=lr|d([0, 0, 0, 1, 1]),
-		wd=wd|d([0, 0, 0, 1, 1]),
-		end=end|d(5))
+	fc_unit.fc_unit('fc7', 'fc8', num=1000,
+		w_filler={'type': '"gaussian"', 'std': 0.01},
+		no_relu=true)
 }}

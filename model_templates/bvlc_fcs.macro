@@ -1,0 +1,33 @@
+{% import 'fc_unit.macro' as fc_unit %}
+
+{% macro bvlc_fcs(
+	input_name,
+	prefix='',
+	param_prefix='',
+	lr=[1, 1],
+	wd=[1, 1],
+	num=[4096, 4096],
+	w_std=[0.005,0.005],
+	b_value=[1, 1],
+	no_relu=[false, false],
+	start=6, last=7)
+	
+%}
+{% for j in range(start-1, last) %}
+{% set i = j - (start-1) %}
+{% set fc_name = 'fc%d'|format(j+1) %}
+{% set prev_fc_name = 'fc%d'|format(j) %}
+{% if i == 0 %}{% set input = input_name %}
+{% else %}{% set input = prefix + prev_fc_name %}
+{% endif %}
+{{
+	fc_unit.fc_unit(
+		input, prefix + fc_name,
+		lr_w=lr[i]*1, lr_b=lr[i]*2, wd_w=wd[i],
+		num=num[i],
+		w_filler={"type": '"gaussian"', "std": w_std[i]},
+		b_filler={"type": '"constant"', "value": b_value[i]},
+		param_name=param_prefix + fc_name, no_relu=no_relu[i])
+}}
+{% endfor %}
+{% endmacro %}
