@@ -49,10 +49,10 @@ layers {
 }
 {% if not no_pool %}
 layers {
-  name: "{{ pool_name }}""
+  name: "{{ pool_name }}"
   type: POOLING
   bottom: "{{ conv_name }}"
-  top: "{{ pool_name }}""
+  top: "{{ pool_name }}"
   pooling_param {
     pool: MAX
     kernel_size: {{ pool_kernel }}
