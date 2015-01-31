@@ -6,54 +6,36 @@
 	param_prefix='',
 	lr=[1, 1, 1, 1, 1],
 	wd=[1, 1, 1, 1, 1],
+	channels=[96, 256, 384, 384, 256],
+	kernel=[11, 5, 3, 3, 3],
+	stride=[4, 1, 1, 1, 1],
+	pad=[0, 2, 1, 1, 1],
+	group=[1, 2, 1, 2, 2],
+	b_value=[0, 1, 0, 0, 1],
+	pool_kernel=[3, 3, 0, 0, 3],
+	pool_stride=[2, 2, 0, 0, 2],
+	no_pool=[false, false, true, true, false],
+	no_norm=[false, false, true, true, true],
 	end=5)
 %}
+{% for i in range(end) %}
+{% set conv_name = 'conv%d'|format(i+1) %}
+{% set prev_conv_name = 'conv%d'|format(i) %}
+{% if i == 0 %}{% set input = input_name %}
+{% elif no_norm[i-1] and no_pool[i-1] %}{% set input = prefix + prev_conv_name + '-conv' %}
+{% elif no_norm[i-1] %}{% set input = prefix + prev_conv_name + '-pool' %}
+{% else %}{% set input = prefix + prev_conv_name + '-norm' %}
+{% endif %}
 {{
 	conv_unit.conv_unit(
-		input_name, prefix + 'conv1',
-		lr_w=lr[0]*1, lr_b=lr[0]*2, wd_w=wd[0],
-		channels=96, kernel=11, stride=4,
-		param_name=param_prefix + 'conv1',
-		pool_kernel=3, pool_stride=2)
+		input, prefix + conv_name,
+		lr_w=lr[i]*1, lr_b=lr[i]*2, wd_w=wd[i],
+		channels=channels[i], kernel=kernel[i], stride=stride[i],
+		group=group[i], pad=pad[i],
+		b_filler={"type": '"constant"', "value": b_value[i]},
+		param_name=param_prefix + conv_name,
+		pool_kernel=pool_kernel[i], pool_stride=pool_stride[i],
+		no_pool=no_pool[i], no_norm=no_norm[i])
 }}
-{% if end > 1 %}
-{{
-	conv_unit.conv_unit(
-		prefix + 'conv1-norm', prefix + 'conv2',
-		lr_w=lr[1]*1, lr_b=lr[1]*2, wd_w=wd[1],
-		channels=256, kernel=5, group=2, pad=2,
-		b_filler={"type": '"constant"', "value": 1},
-		param_name=param_prefix + 'conv2',
-		pool_kernel=3, pool_stride=2)
-}}
-{% if end > 2 %}
-{{
-	conv_unit.conv_unit(
-		prefix + 'conv2-norm', prefix + 'conv3',
-		lr_w=lr[2]*1, lr_b=lr[2]*2, wd_w=wd[2],
-		channels=384, kernel=3, pad=1,
-		param_name=param_prefix + 'conv3',
-		no_pool=true, no_norm=true)
-}}
-{% if end > 3 %}
-{{
-	conv_unit.conv_unit(
-		prefix + 'conv3-relu', prefix + 'conv4',
-		lr_w=lr[3]*1, lr_b=lr[3]*2, wd_w=wd[3],
-		channels=384, kernel=3, group=2, pad=1,
-		param_name=param_prefix + 'conv4',
-		no_pool=true, no_norm=true)
-}}
-{% if end > 4 %}
-{{
-	conv_unit.conv_unit(
-		prefix + 'conv4-relu', prefix + 'conv5',
-		lr_w=lr[4]*1, lr_b=lr[4]*2, wd_w=wd[4],
-		channels=256, kernel=3, group=2, pad=1,
-		b_filler={"type": '"constant"', "value": 1},
-		param_name=param_prefix + 'conv5',
-		pool_kernel=3, pool_stride=2,
-		no_pool=true)
-}}
-{% endif %}{% endif %}{% endif %}{% endif %}
+{% endfor %}
 {% endmacro %}
