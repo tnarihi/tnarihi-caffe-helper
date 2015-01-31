@@ -1,0 +1,76 @@
+{% macro conv_unit(
+  input_name, unit_name,
+  lr_w=1, lr_b=2, wd_w=1, wd_b=0,
+  channels=64, kernel=5, stride=none, group=none, pad=none,
+  w_filler={"type": '"gaussian"', "std": 0.01},
+  b_filler={"type": '"constant"', "value": 0},
+  param_name=none,
+  pool_kernel=3, pool_stride=2,
+  no_pool=false, no_norm=false)
+%}
+{% set conv_name = unit_name + '-conv' %}
+{% set relu_name = unit_name + '-relu' %}
+{% set pool_name = unit_name + '-pool' %}
+{% set norm_name = unit_name + '-norm' %}
+layers {
+  name: "{{ conv_name }}"
+  type: CONVOLUTION
+  bottom: "{{ input_name }}"
+  top: "{{ conv_name }}"
+  blobs_lr: {{ lr_w }}
+  blobs_lr: {{ lr_b }}
+  weight_decay: {{ wd_w }}
+  weight_decay: {{ wd_b }}
+  convolution_param {
+    num_output: {{ channels }}
+    kernel_size: {{ kernel }}
+    {% if stride is not none %}stride: {{ stride }}{% endif %}
+    {% if group is not none %}group: {{ group }}{% endif %}
+    {% if pad is not none %}pad: {{ pad }}{% endif %}
+    weight_filler {
+      {% for key, val in w_filler.iteritems() %}{{ key }}: {{ val }}
+      {% endfor %}
+    }
+    bias_filler {
+      {% for key, val in b_filler.iteritems() %}{{ key }}: {{ val }}
+      {% endfor %}
+    }
+  }
+  {% if param_name is not none %}
+  param: "{{ param_name }}_w"
+  param: "{{ param_name }}_b"
+  {% endif %}
+}
+layers {
+  name: "{{ relu_name }}"
+  type: RELU
+  bottom: "{{ conv_name }}"
+  top: "{{ conv_name }}"
+}
+{% if not no_pool %}
+layers {
+  name: "{{ pool_name }}""
+  type: POOLING
+  bottom: "{{ conv_name }}"
+  top: "{{ pool_name }}""
+  pooling_param {
+    pool: MAX
+    kernel_size: {{ pool_kernel }}
+    stride: {{ pool_stride }}
+  }
+}
+{% endif %}
+{% if not no_norm %}
+layers {
+  name: "{{ norm_name }}"
+  type: LRN
+  bottom: "{{ pool_name }}"
+  top: "{{ norm_name }}"
+  lrn_param {
+    local_size: 5
+    alpha: 0.0001
+    beta: 0.75
+  }
+}
+{% endif %}
+{% endmacro %}

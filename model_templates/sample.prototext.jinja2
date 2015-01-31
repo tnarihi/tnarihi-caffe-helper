@@ -1,0 +1,9 @@
+{% import 'bvlc_conv1_5.macro' as bvlc_conv1_5 %}
+
+{{
+	bvlc_conv1_5.bvlc_conv1_5(
+		'data',
+		lr=lr|d([0, 0, 0, 1, 1]),
+		wd=wd|d([0, 0, 0, 1, 1]),
+		end=end|d(5))
+}}
