@@ -6,6 +6,7 @@ pj = os.path.join
 
 import numpy as np
 
+
 class CaffeHelper(object):
 
     def __init__(self, caffe_root, verbose=True, dir_log=None):
@@ -83,19 +84,20 @@ class CaffeHelper(object):
             print '####### stderr'
             call(['tail', fe])
 
-    def convert_prototxt_template(self, path_template, path_proto, **kw):
-        with open(path_proto, 'w') as fd:
-            tmpl = self.j2env_.from_string(open(path_template).read())
-            print >> fd, tmpl.render(**kw)
-
-    def draw_net_from_prototxt(self, path_proto, rankdir='LR'):
-        if path_proto.endswith('.jinja2'):
+    def convert_prototxt_template(self, path_template, path_proto=None, **kw):
+        if path_proto is None:
             import tempfile
             with tempfile.NamedTemporaryFile(
                     'w', dir=self.dir_proto_out_, delete=False) as fd:
-                path_proto_tmp = fd.name
-            self.convert_prototxt_template(path_proto, path_proto_tmp)
-            path_proto = path_proto_tmp
+                path_proto = fd.name
+        with open(path_proto, 'w') as fd:
+            tmpl = self.j2env_.from_string(open(path_template).read())
+            print >> fd, tmpl.render(**kw)
+        return path_proto
+
+    def draw_net_from_prototxt(self, path_proto, rankdir='LR'):
+        if path_proto.endswith('.jinja2'):
+            path_proto = self.convert_prototxt_template(path_proto)
         from google.protobuf import text_format
         import caffe
         import caffe.draw
@@ -108,4 +110,10 @@ class CaffeHelper(object):
         img = np.asarray(Image.open(StringIO(png)))
         return img
 
-
+    def get_net_from_prototxt(self, path_proto, path_model=None):
+        if path_proto.endswith('.jinja2'):
+            path_proto = self.convert_prototxt_template(path_proto)
+        import caffe
+        if path_model is None:
+            return caffe.Net(path_proto)
+        return caffe.Net(path_proto, path_model)
