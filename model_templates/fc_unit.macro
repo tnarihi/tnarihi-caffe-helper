@@ -4,10 +4,12 @@
   num=64,
   w_filler={"type": '"gaussian"', "std": 0.005},
   b_filler={"type": '"constant"', "value": 1},
-  param_name=none, nonlin_type='RELU')
+  param_name=none, nonlin_type='RELU',
+  dropout_ratio=-1)
 %}
 {% set fc_name = unit_name %}
 {% set nonlin_name = unit_name + '-nonlin' %}
+{% set drop_name = unit_name + '-drop' %}
 layers {
   name: "{{fc_name}}"
   type: INNER_PRODUCT
@@ -39,6 +41,17 @@ layers {
   type: {{nonlin_type}}
   bottom: "{{fc_name}}"
   top: "{{fc_name}}"
+}
+{% endif %}
+{% if dropout_ratio > 0 %}
+layers {
+  name: "{{drop_name}}"
+  type: DROPOUT
+  bottom: "{{fc_name}}"
+  top: "{{fc_name}}"
+  dropout_param {
+    dropout_ratio: {{dropout_ratio}}
+  }
 }
 {% endif %}
 {% endmacro %}

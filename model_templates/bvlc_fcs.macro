@@ -10,6 +10,7 @@
 	w_std=[0.005,0.005],
 	b_value=[1, 1],
 	nonlin_type=['RELU', 'RELU'],
+	dropout_ratio=[0.5, 0.5],
 	start=6, last=7)
 	
 %}
@@ -27,7 +28,8 @@
 		num=num[i],
 		w_filler={"type": '"gaussian"', "std": w_std[i]},
 		b_filler={"type": '"constant"', "value": b_value[i]},
-		param_name=param_prefix + fc_name, nonlin_type=nonlin_type[i])
+		param_name=param_prefix + fc_name, nonlin_type=nonlin_type[i],
+		dropout_ratio=dropout_ratio[i])
 }}
 {% endfor %}
 {% endmacro %}
