@@ -1,0 +1,49 @@
+{% from 'conv_unit.macro' import conv_unit %}
+name: "bvlc_sample"
+
+input: "data"
+input_dim: 10
+input_dim: 3
+input_dim: 227
+input_dim: 227
+
+{% set input = 'data' %}
+{% set filtered = 'data' %}
+{% for i in range(5) %}
+{% set conv_name = 'conv%d'|format(i+1) %}
+{% set nin_name = 'nin%d'|format(i+1) %}
+{% set nin2_name = 'nin2-%d'|format(i+1) %}
+{% set filtered_name = 'sub%d'|format(i+1) %}
+{{
+	conv_unit(input, conv_name,
+		channels=64, kernel=5, pad=2,
+		param_name='conv',
+		no_pool=true, no_norm=true)
+}}
+{{
+	conv_unit(conv_name, nin_name,
+		channels=32, kernel=1, group=2,
+		param_name='nin',
+		no_pool=true, no_norm=true)
+}}
+{{
+	conv_unit(nin_name, nin2_name,
+		channels=3, kernel=1,
+		param_name='nin2',
+		no_pool=true, no_norm=true, nonlin_type=none)
+}}
+layers {
+	name: "{{filtered_name}}"
+	type: ELTWISE
+	bottom: "{{nin2_name}}"
+	bottom: "{{filtered}}"
+	top: "{{filtered_name}}"
+	eltwise_param {
+		operation: SUM
+		coeff: 1
+		coeff: 1
+	}
+}
+{% set input = filtered_name %}
+{% set filtered = filtered_name %}
+{% endfor %}
