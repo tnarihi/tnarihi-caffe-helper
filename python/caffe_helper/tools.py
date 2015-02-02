@@ -85,20 +85,24 @@ class CaffeHelper(object):
             print '####### stderr'
             call(['tail', fe])
 
-    def convert_prototxt_template(self, path_template, path_proto=None, **kw):
+    def convert_prototxt_template(self, path_template, path_proto=None, **proto_kw):
+        """
+        """
         if path_proto is None:
             m = hashlib.md5(open(path_template, 'rb').read())
-            if kw:
-                m.update(str(kw))
+            if proto_kw:
+                m.update(str(proto_kw))
             path_proto = pj(self.dir_proto_out_, m.hexdigest() + '.prototxt')
         with open(path_proto, 'w') as fd:
             tmpl = self.j2env_.from_string(open(path_template).read())
-            print >> fd, tmpl.render(**kw)
+            print >> fd, tmpl.render(**proto_kw)
         return path_proto
 
-    def draw_net_from_prototxt(self, path_proto, rankdir='LR'):
+    def draw_net_from_prototxt(self, path_proto, rankdir='LR', **proto_kw):
+        """
+        """
         if path_proto.endswith('.jinja2'):
-            path_proto = self.convert_prototxt_template(path_proto)
+            path_proto = self.convert_prototxt_template(path_proto, **proto_kw)
         from google.protobuf import text_format
         import caffe
         import caffe.draw
