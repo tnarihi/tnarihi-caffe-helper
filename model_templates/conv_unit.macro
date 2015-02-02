@@ -6,10 +6,10 @@
   b_filler={"type": '"constant"', "value": 0},
   param_name=none,
   pool_kernel=3, pool_stride=2,
-  no_pool=false, no_norm=false)
+  nonlin_type='RELU', no_pool=false, no_norm=false)
 %}
 {% set conv_name = unit_name %}
-{% set relu_name = unit_name + '-relu' %}
+{% set nonlin_name = unit_name + '-nonlin' %}
 {% set pool_name = unit_name + '-pool' %}
 {% set norm_name = unit_name + '-norm' %}
 layers {
@@ -41,12 +41,14 @@ layers {
   param: "{{ param_name }}_b"
   {% endif %}
 }
+{% if nonlin_type is not none %}
 layers {
-  name: "{{ relu_name }}"
-  type: RELU
+  name: "{{ nonlin_name }}"
+  type: {{nonlin_type}}
   bottom: "{{ conv_name }}"
   top: "{{ conv_name }}"
 }
+{% endif %}
 {% if not no_pool %}
 layers {
   name: "{{ pool_name }}"

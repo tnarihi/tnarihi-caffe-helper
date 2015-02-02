@@ -1,4 +1,4 @@
-{% import 'conv_unit.macro' as conv_unit %}
+{% from 'conv_unit.macro' import conv_unit %}
 
 {% macro bvlc_convolutions(
 	input_name,
@@ -29,7 +29,7 @@
 {% else %}{% set input = prefix + prev_conv_name + '-norm' %}
 {% endif %}
 {{
-	conv_unit.conv_unit(
+	conv_unit(
 		input, prefix + conv_name,
 		lr_w=lr[i]*1, lr_b=lr[i]*2, wd_w=wd[i],
 		channels=channels[i], kernel=kernel[i], stride=stride[i],

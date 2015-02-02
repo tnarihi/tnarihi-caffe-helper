@@ -4,10 +4,10 @@
   num=64,
   w_filler={"type": '"gaussian"', "std": 0.005},
   b_filler={"type": '"constant"', "value": 1},
-  param_name=none, no_relu=false)
+  param_name=none, nonlin_type='RELU')
 %}
 {% set fc_name = unit_name %}
-{% set relu_name = unit_name + '-relu' %}
+{% set nonlin_name = unit_name + '-nonlin' %}
 layers {
   name: "{{fc_name}}"
   type: INNER_PRODUCT
@@ -33,10 +33,10 @@ layers {
   param: "{{ param_name }}_b"
   {% endif %}
 }
-{% if not no_relu %}
+{% if nonlin_type is not none %}
 layers {
-  name: "{{relu_name}}"
-  type: RELU
+  name: "{{nonlin_name}}"
+  type: {{nonlin_type}}
   bottom: "{{fc_name}}"
   top: "{{fc_name}}"
 }
