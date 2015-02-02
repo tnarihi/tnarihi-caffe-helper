@@ -2,6 +2,7 @@ import os
 import sys
 import datetime
 from subprocess import call
+import hashlib
 pj = os.path.join
 
 import numpy as np
@@ -86,10 +87,10 @@ class CaffeHelper(object):
 
     def convert_prototxt_template(self, path_template, path_proto=None, **kw):
         if path_proto is None:
-            import tempfile
-            with tempfile.NamedTemporaryFile(
-                    'w', dir=self.dir_proto_out_, delete=False) as fd:
-                path_proto = fd.name
+            m = hashlib.md5(open(path_template, 'rb').read())
+            if kw:
+                m.update(str(kw))
+            path_proto = pj(self.dir_proto_out_, m.hexdigest() + '.prototxt')
         with open(path_proto, 'w') as fd:
             tmpl = self.j2env_.from_string(open(path_template).read())
             print >> fd, tmpl.render(**kw)
