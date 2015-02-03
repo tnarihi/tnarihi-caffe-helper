@@ -1,0 +1,19 @@
+{#
+params: net, snapshot_prefix, max_iter
+optional params:
+	test_iter=200, test_interval=1000, base_lr=0.001, display=50,
+	momentum=0.9, weight_decay=0.000001, snapshot=1000, debug_info=false
+#}
+net: "{{net}}"
+test_iter: {{ test_iter|d(200) }}
+test_interval: {{ test_interval|d(1000) }}
+base_lr: {{ base_lr|d(0.001) }}
+display: {{ display|d(50) }}
+average_loss: {{ display|d(50) }}
+max_iter: {{ max_iter }}
+momentum: {{ momentum|d(0.9) }}
+weight_decay: {{ weight_decay|d(0.000001) }}
+snapshot: {{ snapshot|d(1000) }}
+snapshot_prefix: "{{snapshot_prefix}}"
+lr_policy: "fixed"
+{% if debug_info|d(false) %}debug_info: true{% endif %}
