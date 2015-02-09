@@ -30,7 +30,7 @@ def call_subprocess(*args, **kw):
         if ret != 0:
             raise RuntimeError(
                 'Process "%s" exit with status %d' % (str(args[0]), ret))
-    except:
+    finally:
         """This doen't ensure that child processes is killed when parent
         crashes"""
         if p.returncode is None:
@@ -113,12 +113,8 @@ class CaffeHelper(object):
         fe = pj(self.dir_log_, logname + '.e')
         if self.verbose_:
             print 'run "%s"' % ' '.join(tokens)
-        call_subprocess(tokens, stdout=open(fo, 'w'), stderr=open(fe, 'w'))
-        if self.verbose_:
-            print '####### stdout'
-            call_subprocess(['tail', fo])
-            print '####### stderr'
-            call_subprocess(['tail', fe])
+        with open(fo, 'w') as fod, open(fe, 'w') as fed:
+            call_subprocess(tokens, stdout=fod, stderr=fed)
 
     def convert_prototxt_template(self, path_template, path_proto=None,
                                   **proto_kw):
