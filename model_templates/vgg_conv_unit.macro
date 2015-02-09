@@ -1,0 +1,76 @@
+{% macro vgg_conv_unit(
+  input_name, unit_prefix,
+  lr_w=1, lr_b=2, wd_w=1, wd_b=0,
+  channels=64, kernel=3, pad=1, stride=none, group=none, 
+  w_filler={"type": '"gaussian"', "std": 0.01},
+  b_filler={"type": '"constant"', "value": 0},
+  param_prefix=none,
+  num_conv=2,
+  pool_kernel=2, pool_stride=2,
+  nonlin_type='RELU', pool_type="MAX")
+%}
+{# Convolutions-relu loop #}
+{% for cid in range(num_conv) %}
+{% set conv_name = unit_prefix + '_%d'|format(cid+1) %}
+{% set nonlin_name = conv_name + '-nonlin' %}
+{% if cid == 0 %}
+  {% set bottom = input_name %}
+{% else %}
+  {% set bottom = unit_prefix + '_%d'|format(cid) %}
+{% endif %}
+{% if param_prefix is not none %}
+  {% set param_name = param_prefix + '_%d'|format(cid+1) %}
+{% endif %}
+layers {
+  name: "{{conv_name}}"{# e.g. conv1_2#}
+  type: CONVOLUTION
+  bottom: "{{ bottom }}"{# e.g. data/conv1_1#}
+  top: "{{ conv_name }}"
+  blobs_lr: {{ lr_w }}
+  blobs_lr: {{ lr_b }}
+  weight_decay: {{ wd_w }}
+  weight_decay: {{ wd_b }}
+  convolution_param {
+    num_output: {{ channels }}
+    kernel_size: {{ kernel }}
+    {% if stride is not none %}stride: {{ stride }}{% endif %}
+    {% if group is not none %}group: {{ group }}{% endif %}
+    {% if pad is not none %}pad: {{ pad }}{% endif %}
+    weight_filler {
+      {% for key, val in w_filler.iteritems() %}{{ key }}: {{ val }}
+      {% endfor %}
+    }
+    bias_filler {
+      {% for key, val in b_filler.iteritems() %}{{ key }}: {{ val }}
+      {% endfor %}
+    }
+  }
+  {% if param_prefix is not none %}
+  param: "{{ param_name }}_w"
+  param: "{{ param_name }}_b"
+  {% endif %}
+}
+{% if nonlin_type is not none %}
+layers {
+  name: "{{ nonlin_name }}"
+  type: {{nonlin_type}}
+  bottom: "{{ conv_name }}"
+  top: "{{ conv_name }}"
+}
+{% endif %}
+{% endfor %}
+{% if not no_pool %}
+{% set pool_name = unit_prefix + '-pool' %}
+layers {
+  name: "{{pool_name}}"
+  type: POOLING
+  bottom: "{{ unit_prefix + '_%d'|format(num_conv) }}"
+  top: "{{ pool_name }}"
+  pooling_param {
+    pool: {{pool_type}}
+    kernel_size: {{ pool_kernel }}
+    stride: {{ pool_stride }}
+  }
+}
+{% endif %}
+{% endmacro %}

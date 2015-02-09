@@ -1,0 +1,48 @@
+{% from 'vgg_conv_unit.macro' import vgg_conv_unit %}
+
+{% macro vgg_convs(
+	input_name,
+	prefix='',
+	param_prefix='',
+	lr=[1, 1, 1, 1, 1],
+	wd=[1, 1, 1, 1, 1],
+	channels=[64, 128, 256, 512, 512],
+	kernel=[3, 3, 3, 3, 3],
+	stride=[1, 1, 1, 1, 1],
+	pad=[1, 1, 1, 1, 1],
+	group=[1, 1, 1, 1, 1],
+	w_std=[0.01,0.01,0.01,0.01,0.01],
+	b_value=[0, 0, 0, 0, 0],
+	pool_kernel=[2, 2, 2, 2, 2],
+	pool_stride=[2, 2, 2, 2, 2],
+	num_conv=[2, 2, 3, 3, 3],
+	nonlin_type=['RELU', 'RELU', 'RELU', 'RELU', 'RELU'],
+	pool_type=['MAX', 'MAX', 'MAX', 'MAX', 'MAX'], 
+	start=1, last=5)
+%}
+{% for j in range(start-1, last) %}
+{% set i = j - (start-1) %}
+{% set conv_name = 'conv%d'|format(j+1) %}
+{% set prev_conv_name = 'conv%d'|format(j) %}
+{% if i == 0 %}
+	{% set input = input_name %}
+{% elif pool_type[i-1] is none %}
+	{% set input = prefix + prev_conv_name + '_%d'|format(num_conv[i-1]) %}
+{% else %}
+	{% set input = prefix + prev_conv_name + '-pool' %}
+{% endif %}
+{{
+	vgg_conv_unit(
+		input, prefix + conv_name,
+		lr_w=lr[i]*1, lr_b=lr[i]*2, wd_w=wd[i],
+		channels=channels[i], kernel=kernel[i], stride=stride[i],
+		group=group[i], pad=pad[i],
+		w_filler={"type": '"gaussian"', "std": w_std[i]},
+  		b_filler={"type": '"constant"', "value": b_value[i]},
+		param_prefix=param_prefix + conv_name,
+		pool_kernel=pool_kernel[i], pool_stride=pool_stride[i],
+		num_conv=num_conv[i],
+		pool_type=pool_type[i], nonlin_type=nonlin_type[i])
+}}
+{% endfor %}
+{% endmacro %}

@@ -1,0 +1,19 @@
+{% from 'vgg_convs.macro' import vgg_convs %}
+{% from 'bvlc_fcs.macro' import bvlc_fcs %}
+{% from 'fc_unit.macro' import fc_unit %}
+name: "sample_vgg16"
+
+input: "data"
+input_dim: 10
+input_dim: 3
+input_dim: 224
+input_dim: 224
+
+
+{{vgg_convs('data')}}
+{{bvlc_fcs('conv5-pool')}}
+{{
+	fc_unit('fc7', 'fc8', num=1000,
+		w_filler={'type': '"gaussian"', 'std': 0.01},
+		nonlin_type='SOFTMAX')
+}}
