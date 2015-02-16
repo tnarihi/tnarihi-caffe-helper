@@ -4,21 +4,27 @@
   num=64,
   w_filler={"type": '"gaussian"', "std": 0.005},
   b_filler={"type": '"constant"', "value": 1},
-  param_name=none, nonlin_type='RELU',
+  param_name=none, nonlin_type='ReLU',
   dropout_ratio=-1)
 %}
 {% set fc_name = unit_name %}
 {% set nonlin_name = unit_name + '-nonlin' %}
 {% set drop_name = unit_name + '-drop' %}
-layers {
+layer {
   name: "{{fc_name}}"
-  type: INNER_PRODUCT
+  type: "InnerProduct"
   bottom: "{{input_name}}"
   top: "{{fc_name}}"
-  blobs_lr: {{lr_w}}
-  blobs_lr: {{lr_b}}
-  weight_decay: {{wd_w}}
-  weight_decay: {{wd_b}}
+  param {
+    lr_mult: {{ lr_w }}
+    decay_mult: {{ wd_w }}
+    {% if param_name is not none %}name: "{{ param_name }}_w"{%endif%}
+  }
+  param {
+    lr_mult: {{ lr_b }}
+    decay_mult: {{ wd_b }}
+    {% if param_name is not none %}name: "{{ param_name }}_b"{%endif%}
+  }
   inner_product_param {
     num_output: {{num}}
     weight_filler {
@@ -30,23 +36,19 @@ layers {
       {% endfor %}
     }
   }
-  {% if param_name is not none %}
-  param: "{{ param_name }}_w"
-  param: "{{ param_name }}_b"
-  {% endif %}
 }
 {% if nonlin_type is not none %}
-layers {
+layer {
   name: "{{nonlin_name}}"
-  type: {{nonlin_type}}
+  type: "{{nonlin_type}}"
   bottom: "{{fc_name}}"
   top: "{{fc_name}}"
 }
 {% endif %}
 {% if dropout_ratio > 0 %}
-layers {
+layer {
   name: "{{drop_name}}"
-  type: DROPOUT
+  type: "Dropout"
   bottom: "{{fc_name}}"
   top: "{{fc_name}}"
   dropout_param {

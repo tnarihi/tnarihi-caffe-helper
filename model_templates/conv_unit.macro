@@ -6,21 +6,27 @@
   b_filler={"type": '"constant"', "value": 0},
   param_name=none,
   pool_kernel=3, pool_stride=2,
-  nonlin_type='RELU', no_pool=false, no_norm=false)
+  nonlin_type='ReLU', no_pool=false, no_norm=false)
 %}
 {% set conv_name = unit_name %}
 {% set nonlin_name = unit_name + '-nonlin' %}
 {% set pool_name = unit_name + '-pool' %}
 {% set norm_name = unit_name + '-norm' %}
-layers {
+layer {
   name: "{{ conv_name }}"
-  type: CONVOLUTION
+  type: "Convolution"
   bottom: "{{ input_name }}"
   top: "{{ conv_name }}"
-  blobs_lr: {{ lr_w }}
-  blobs_lr: {{ lr_b }}
-  weight_decay: {{ wd_w }}
-  weight_decay: {{ wd_b }}
+  param {
+    lr_mult: {{ lr_w }}
+    decay_mult: {{ wd_w }}
+    {% if param_name is not none %}name: "{{ param_name }}_w"{%endif%}
+  }
+  param {
+    lr_mult: {{ lr_b }}
+    decay_mult: {{ wd_b }}
+    {% if param_name is not none %}name: "{{ param_name }}_b"{%endif%}
+  }
   convolution_param {
     num_output: {{ channels }}
     kernel_size: {{ kernel }}
@@ -36,23 +42,19 @@ layers {
       {% endfor %}
     }
   }
-  {% if param_name is not none %}
-  param: "{{ param_name }}_w"
-  param: "{{ param_name }}_b"
-  {% endif %}
 }
 {% if nonlin_type is not none %}
-layers {
+layer {
   name: "{{ nonlin_name }}"
-  type: {{nonlin_type}}
+  type: "{{nonlin_type}}"
   bottom: "{{ conv_name }}"
   top: "{{ conv_name }}"
 }
 {% endif %}
 {% if not no_pool %}
-layers {
+layer {
   name: "{{ pool_name }}"
-  type: POOLING
+  type: "Pooling"
   bottom: "{{ conv_name }}"
   top: "{{ pool_name }}"
   pooling_param {
@@ -63,9 +65,9 @@ layers {
 }
 {% endif %}
 {% if not no_norm %}
-layers {
+layer {
   name: "{{ norm_name }}"
-  type: LRN
+  type: "LRN"
   bottom: "{{ pool_name }}"
   top: "{{ norm_name }}"
   lrn_param {

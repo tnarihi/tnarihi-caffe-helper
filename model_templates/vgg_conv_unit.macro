@@ -7,7 +7,7 @@
   param_prefix=none,
   num_conv=2,
   pool_kernel=2, pool_stride=2,
-  nonlin_type='RELU', pool_type="MAX")
+  nonlin_type='ReLU', pool_type="MAX")
 %}
 {# Convolutions-relu loop #}
 {% for cid in range(num_conv) %}
@@ -21,15 +21,21 @@
 {% if param_prefix is not none %}
   {% set param_name = param_prefix + '_%d'|format(cid+1) %}
 {% endif %}
-layers {
+layer {
   name: "{{conv_name}}"{# e.g. conv1_2#}
-  type: CONVOLUTION
+  type: "Convolution"
   bottom: "{{ bottom }}"{# e.g. data/conv1_1#}
   top: "{{ conv_name }}"
-  blobs_lr: {{ lr_w }}
-  blobs_lr: {{ lr_b }}
-  weight_decay: {{ wd_w }}
-  weight_decay: {{ wd_b }}
+  param {
+    lr_mult: {{ lr_w }}
+    decay_mult: {{ wd_w }}
+    {% if param_name is not none %}name: "{{ param_name }}_w"{%endif%}
+  }
+  param {
+    lr_mult: {{ lr_b }}
+    decay_mult: {{ wd_b }}
+    {% if param_name is not none %}name: "{{ param_name }}_b"{%endif%}
+  }
   convolution_param {
     num_output: {{ channels }}
     kernel_size: {{ kernel }}
@@ -45,15 +51,11 @@ layers {
       {% endfor %}
     }
   }
-  {% if param_prefix is not none %}
-  param: "{{ param_name }}_w"
-  param: "{{ param_name }}_b"
-  {% endif %}
 }
 {% if nonlin_type is not none %}
-layers {
+layer {
   name: "{{ nonlin_name }}"
-  type: {{nonlin_type}}
+  type: "{{nonlin_type}}"
   bottom: "{{ conv_name }}"
   top: "{{ conv_name }}"
 }
@@ -61,9 +63,9 @@ layers {
 {% endfor %}
 {% if not no_pool %}
 {% set pool_name = unit_prefix + '-pool' %}
-layers {
+layer {
   name: "{{pool_name}}"
-  type: POOLING
+  type: "Pooling"
   bottom: "{{ unit_prefix + '_%d'|format(num_conv) }}"
   top: "{{ pool_name }}"
   pooling_param {

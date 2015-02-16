@@ -9,7 +9,7 @@
 	num=[4096, 4096],
 	w_std=[0.005,0.005],
 	b_value=[1, 1],
-	nonlin_type=['RELU', 'RELU'],
+	nonlin_type=['ReLU', 'ReLU'],
 	dropout_ratio=[0.5, 0.5],
 	start=6, last=7)
 	

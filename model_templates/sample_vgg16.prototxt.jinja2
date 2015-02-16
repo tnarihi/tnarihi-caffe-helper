@@ -15,5 +15,5 @@ input_dim: 224
 {{
 	fc_unit('fc7', 'fc8', num=1000,
 		w_filler={'type': '"gaussian"', 'std': 0.01},
-		nonlin_type='SOFTMAX')
+		nonlin_type='Softmax')
 }}

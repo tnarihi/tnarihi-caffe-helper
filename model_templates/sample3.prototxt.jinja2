@@ -34,7 +34,7 @@ input_dim: 227
 }}
 layers {
 	name: "{{filtered_name}}"
-	type: ELTWISE
+	type: "Eltwise"
 	bottom: "{{nin2_name}}"
 	bottom: "{{filtered}}"
 	top: "{{filtered_name}}"

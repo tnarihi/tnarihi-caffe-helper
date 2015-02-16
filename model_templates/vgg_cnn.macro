@@ -1,8 +1,8 @@
-{% from 'bvlc_convolutions.macro' import bvlc_convolutions %}
+{% from 'vgg_convs.macro' import vgg_convs %}
 {% from 'bvlc_fcs.macro' import bvlc_fcs %}
 {% from 'fc_unit.macro' import fc_unit %}
-{% macro bvlc_cnn(input_name, prefix='', param_prefix='', no_fc8=false) %}
-{{bvlc_convolutions(input_name, prefix, param_prefix)}}
+{% macro vgg_cnn(input_name, prefix='', param_prefix='', no_fc8=false) %}
+{{vgg_convs(input_name, prefix, param_prefix)}}
 {{bvlc_fcs(prefix + 'conv5-pool', prefix, param_prefix)}}
 {% if not no_fc8 %}{{
 	fc_unit('fc7', 'fc8', num=1000,

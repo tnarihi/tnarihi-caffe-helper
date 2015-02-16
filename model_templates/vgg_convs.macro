@@ -16,7 +16,7 @@
 	pool_kernel=[2, 2, 2, 2, 2],
 	pool_stride=[2, 2, 2, 2, 2],
 	num_conv=[2, 2, 3, 3, 3],
-	nonlin_type=['RELU', 'RELU', 'RELU', 'RELU', 'RELU'],
+	nonlin_type=['ReLU', 'ReLU', 'ReLU', 'ReLU', 'ReLU'],
 	pool_type=['MAX', 'MAX', 'MAX', 'MAX', 'MAX'], 
 	start=1, last=5)
 %}
