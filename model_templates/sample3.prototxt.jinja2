@@ -32,7 +32,7 @@ input_dim: 227
 		param_name='nin2',
 		no_pool=true, no_norm=true, nonlin_type=none)
 }}
-layers {
+layer {
 	name: "{{filtered_name}}"
 	type: "Eltwise"
 	bottom: "{{nin2_name}}"
