@@ -46,7 +46,7 @@ def call_subprocess(*args, **kw):
     finally:
         """This doen't ensure that child processes is killed when parent
         crashes"""
-        if p.returncode is None:
+        if 'p' in locals() and p.returncode is None:
             p.terminate()
             p.kill()
             print >> sys.stderr, 'Process killed: pid=%d command="%s"' % (
