@@ -15,10 +15,18 @@ def j2filter_slice_list(value, slices):
     except TypeError:
         return value[:slices]
 
+
+def j2filter_bool2str(value):
+    if value:
+        return 'true'
+    else:
+        return 'false'
+
 J2FILTERS = {
     'max': max,
     'min': min,
     'slice_list': j2filter_slice_list,
+    'bool2str': j2filter_bool2str,
 }
 
 
