@@ -22,11 +22,16 @@ def j2filter_bool2str(value):
     else:
         return 'false'
 
+
+def j2filter_to_int(value):
+    return int(value)
+
 J2FILTERS = {
     'max': max,
     'min': min,
     'slice_list': j2filter_slice_list,
     'bool2str': j2filter_bool2str,
+    'to_int': j2filter_to_int,
 }
 
 
