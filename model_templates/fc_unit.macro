@@ -4,6 +4,7 @@
   num=64,
   w_filler={"type": '"gaussian"', "std": 0.005},
   b_filler={"type": '"constant"', "value": 1},
+  bias_term=true,
   param_name=none, nonlin_type='ReLU',
   dropout_ratio=-1)
 %}
@@ -31,10 +32,13 @@ layer {
       {% for key, val in w_filler.iteritems() %}{{ key }}: {{ val }}
       {% endfor %}
     }
+    {% if bias_term %}
     bias_filler {
       {% for key, val in b_filler.iteritems() %}{{ key }}: {{ val }}
       {% endfor %}
     }
+    bias_term: {{bias_term|bool2str}}
+    {% endif %}
   }
 }
 {% if nonlin_type is not none %}
@@ -43,6 +47,12 @@ layer {
   type: "{{nonlin_type}}"
   bottom: "{{fc_name}}"
   top: "{{fc_name}}"
+  {% if nonlin_type == 'PReLU' %}
+  param {
+    decay_mult: 0
+    {% if param_name is not none %}name: "{{param_name}}_prelu"{%endif%}
+  }
+  {% endif %}
 }
 {% endif %}
 {% if dropout_ratio > 0 %}
