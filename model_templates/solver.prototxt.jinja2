@@ -17,3 +17,7 @@ snapshot: {{ snapshot|d(1000) }}
 snapshot_prefix: "{{snapshot_prefix}}"
 lr_policy: "fixed"
 {% if debug_info|d(false) %}debug_info: true{% endif %}
+{% set accum_grad = accum_grad|d(1) %}
+{% if accum_grad > 1 %}iter_size: {{ accum_grad }}{% endif %}
+{% if share_blobs|d(true) %}share_blobs: true{%endif%}
+{% if force_cpu_momentum|d(false) %}force_cpu_momentum: true{% endif %}

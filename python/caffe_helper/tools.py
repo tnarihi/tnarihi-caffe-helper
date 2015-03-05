@@ -147,7 +147,9 @@ class CaffeHelper(object):
                             snapshot_prefix, max_iter, test_iter=200,
                             test_interval=100, base_lr=0.001,
                             display=50, momentum=0.9,
-                            weight_decay=1e-6, snapshot=100, debug_info=True):
+                            weight_decay=1e-6, snapshot=100, debug_info=False,
+                            accum_grad=1, share_blobs=True,
+                            force_cpu_momentum=False):
         """
         """
         kw = locals().copy()
