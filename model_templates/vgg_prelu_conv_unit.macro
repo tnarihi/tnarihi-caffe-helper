@@ -1,0 +1,85 @@
+{% macro vgg_prelu_conv_unit(
+  input_name, unit_prefix,
+  lr_w=1, lr_b=1, wd_w=1, wd_b=0,
+  channels=64, kernel=3, pad=1, stride=none, group=none, 
+  param_prefix=none,
+  num_conv=2,
+  pool_kernel=2, pool_stride=2,
+  nonlin_type='PReLU', pool_type="MAX")
+%}
+{# Convolutions-relu loop #}
+{% for cid in range(num_conv) %}
+{% set conv_name = unit_prefix + '_%d'|format(cid+1) %}
+{% set nonlin_name = conv_name + '-nonlin' %}
+{% if cid == 0 %}
+  {% set bottom = input_name %}
+{% else %}
+  {% set bottom = unit_prefix + '_%d'|format(cid) %}
+{% endif %}
+{% if param_prefix is not none %}
+  {% set param_name = param_prefix + '_%d'|format(cid+1) %}
+{% endif %}
+layer {
+  name: "{{conv_name}}"{# e.g. conv1_2#}
+  type: "Convolution"
+  bottom: "{{ bottom }}"{# e.g. data/conv1_1#}
+  top: "{{ conv_name }}"
+  param {
+    lr_mult: {{ lr_w }}
+    decay_mult: {{ wd_w }}
+    {% if param_name is not none %}name: "{{ param_name }}_w"{%endif%}
+  }
+  param {
+    lr_mult: {{ lr_b }}
+    decay_mult: {{ wd_b }}
+    {% if param_name is not none %}name: "{{ param_name }}_b"{%endif%}
+  }
+  convolution_param {
+    num_output: {{ channels }}
+    kernel_size: {{ kernel }}
+    {% if stride is not none %}stride: {{ stride }}{% endif %}
+    {% if group is not none %}group: {{ group }}{% endif %}
+    {% if pad is not none %}pad: {{ pad }}{% endif %}
+    weight_filler {
+      type: "gaussian"
+      {% if nonlin_type == 'PReLU' %}
+      std: {{(2.0 / ((kernel**2) * channels * (1.0 + 0.25**2)))**0.5}}
+      {% elif nonlin_type == 'ReLU' %}
+      std: {{(2.0 / ((kernel**2) * channels))**0.5}}
+      {% else %}
+      # Xavier
+      std: {{(1.0 / ((kernel**2) * channels))**0.5}}
+      {% endif %}
+    }
+  }
+}
+{% if nonlin_type is not none %}
+layer {
+  name: "{{ nonlin_name }}"
+  type: "{{nonlin_type}}"
+  bottom: "{{ conv_name }}"
+  top: "{{ conv_name }}"
+  {%if nonlin_type == 'PReLU' %}
+  param {
+    {% if param_name is not none %}name: "{{param_name}}_prelu"{%endif%}
+    decay_mult: 0
+  }
+  {%endif%}
+}
+{% endif %}
+{% endfor %}
+{% if not no_pool %}
+{% set pool_name = unit_prefix + '-pool' %}
+layer {
+  name: "{{pool_name}}"
+  type: "Pooling"
+  bottom: "{{ unit_prefix + '_%d'|format(num_conv) }}"
+  top: "{{ pool_name }}"
+  pooling_param {
+    pool: {{pool_type}}
+    kernel_size: {{ pool_kernel }}
+    stride: {{ pool_stride }}
+  }
+}
+{% endif %}
+{% endmacro %}
