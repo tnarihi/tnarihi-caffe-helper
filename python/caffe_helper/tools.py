@@ -92,7 +92,6 @@ def get_solver_prototxt(net,
     """
     """
     kw = locals().copy()
-    del kw['self']
     path_solver = convert_prototxt_template(
         pj(dir_template, 'solver.prototxt.jinja2'), **kw)
     return path_solver
@@ -123,7 +122,6 @@ def train_by_net(net,
     """
     """
     kw = locals().copy()
-    del kw['self']
     del kw['gpu']
     del kw['path_pretrained']
     del kw['path_snapshot']
