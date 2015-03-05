@@ -245,3 +245,25 @@ class CaffeHelper(object):
         if path_model is None:
             return caffe.Net(path_proto)
         return caffe.Net(path_proto, path_model)
+
+    def run_create_lmdb(self, image_txt, image_root, lmdb_out, shuffle=False,
+        height=None, width=None):
+        """"""
+        env = os.environ.copy()
+        env['GLOB_logtostderr'] = '1'
+        tokens = [
+            pj(self.caffe_root_, 'build/tools', 'convert_imageset'),
+            '%s/'%image_root,
+            '%s'%image_txt,
+            lmdb_out,
+            '--encoded',
+        ]
+        if shuffle:
+            tokens += ['--seed', '313', '--shuffle']
+        if height is not None:
+            tokens += ['--resize_height', height]
+        if width is not None:
+            tokens += ['--resize_width', width]
+        tokens = map(str, tokens)
+        print 'run:', ' '.join(tokens)
+        call_subprocess(tokens, env=env)
