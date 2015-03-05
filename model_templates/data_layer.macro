@@ -1,0 +1,27 @@
+{% macro data_layer(source, batch_size, prefix, phase_train=true,
+  backend='LMDB', crop_size=none, mirror=false, mean_str=none)
+%}
+layer {
+  name: "{{prefix}}data"
+  type: "Data"
+  top: "{{prefix}}data"
+  top: "{{prefix}}label"
+  data_param {
+    source: "{{source}}"
+    backend: {{backend}}
+    batch_size: {{batch_size}}
+  }
+  transform_param {
+    {% if crop_size is not none %}crop_size: {{crop_size}}{%endif%}
+    {% if mean_str is none %}
+    mean_value: 104
+    mean_value: 117
+    mean_value: 123
+    {% else %}
+    {{mean_str}}
+    {% endif %}
+    mirror: {{mirror|bool2str}}
+  }
+  include: { phase: {% if phase_train %}TRAIN{%else%}TEST{%endif%} }
+}
+{% endmacro %}
