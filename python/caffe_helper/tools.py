@@ -82,7 +82,7 @@ class CaffeHelper(object):
             pj(os.path.dirname(__file__), '..', '..', 'model_templates')
         )
         from jinja2 import Environment, FileSystemLoader
-        env = Environment()
+        env = Environment(extensions=['jinja2.ext.do'])
         env.filters.update(J2FILTERS)
         env.loader = FileSystemLoader(path_jinja2)
         self.j2env_ = env
