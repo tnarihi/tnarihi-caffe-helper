@@ -19,6 +19,14 @@ class ImageTransformer(object):
     logger.setLevel(INFO)
     logger.addHandler(handler)
 
+    @staticmethod
+    def get_params(
+            height=-1, width=-1, crop_size=None, pad=0, mirror=False,
+            scale=None, mean_value=None, color=True, channel_swap=None,
+            random_crop=False, random_seed=313):
+        """"""
+        return locals()
+
     def __init__(self, param):
         self.random_seed_ = param.get('random_seed', 313)
         self.mirror_ = param.get('mirror', False)
@@ -155,6 +163,15 @@ class ImageDataLayer(BaseDataLayer):
     logger.setLevel(INFO)
     logger.addHandler(handler)
 
+    @staticmethod
+    def get_params(
+            source, column_id=0, root='', shuffle=False, num_thread=8,
+            height=-1, width=-1, crop_size=None, pad=0, mirror=False,
+            scale=None, mean_value=None, color=True, channel_swap=None,
+            random_crop=False, random_seed=313):
+        """"""
+        return locals()
+
     def data_setup(self, bottom, top):
         param = eval(self.param_str_)
         self.source_ = param['source']
@@ -214,6 +231,12 @@ class ScalarDataLayer(BaseDataLayer):
     handler.setLevel(INFO)
     logger.setLevel(INFO)
     logger.addHandler(handler)
+
+    @staticmethod
+    def get_params(
+            source, column_id=0, shuffle=False, random_seed=313):
+        """"""
+        return locals()
 
     def data_setup(self, bottom, top):
         param = eval(self.param_str_)
