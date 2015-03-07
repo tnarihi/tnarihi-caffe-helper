@@ -163,6 +163,60 @@ def get_output(blobs, proto_path, model_path,
             outputs[b] += [ret[b].copy()]
     return outputs
 
+def save_output_hdf5(blobs, proto_path, model_path, path_out, path_names,
+    h5mode='a', name_column=0, gpu=0, phase=None):
+    """
+    h5d = H5File(path_h5, h5mode)
+    for i, d in enumerate(dataset):
+        if i % 5000 == 0: print i,
+        name, label = d[0], int(d[1])
+        path = os.path.join(data_root, name)
+        if d[0] in h5d:
+            if not recompute:
+                continue
+            del h5d[d[0]]
+        try:
+            img = caffe.io.load_image(path)
+            score = net.predict((img, )).flatten()
+            h5d[d[0]] = score
+        except Exception as e:
+            import sys
+            print >> sys.stderr, 'Error in %s' % path
+            h5d.close()
+            raise e
+    print ''
+    h5d.close()
+    """
+    import csv
+    import caffe
+    from h5py import File as H5File
+    if phase is None:
+        phase = caffe.TEST
+    try:
+        os.makedirs(os.path.dirname(path_out))
+    except:
+        pass
+    names = map(lambda x: x[name_column], csv.reader(open(path_names, 'r')))
+    with H5File(path_out, h5mode) as h5d:
+        if gpu < 0:
+            caffe.set_mode_cpu()
+        else:
+            caffe.set_mode_gpu()
+            caffe.set_device(gpu)
+        net = caffe.Net(proto_path, phase)
+        net.copy_from(model_path)
+        outputs = dict(zip(blobs, [[] for i in xrange(len(blobs))]))
+        i = 0
+        while True:
+            ret = net.forward(blobs=blobs)
+            for s in xrange(ret[blobs[0]].shape[0]):
+                if len(names) == i:
+                    return
+                h5d.create_group(names[i])
+                for b in blobs:
+                    h5d[names[i]][b] = ret[b][s].copy()
+                i += 1
+
 
 def draw_net_from_prototxt(path_proto, rankdir='LR', **proto_kw):
     """"""
