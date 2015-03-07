@@ -1,0 +1,13 @@
+{% macro image_data_layer(name, phase_train=true, param_str) %}
+layer {
+  name: "{{name}}"
+  type: "Python"
+  top: "{{name}}"
+  python_param {
+    module: "caffe_helper.layers.data_layers"
+    layer: "ImageDataLayer"
+    param_str: "{{param_str}}"
+  }
+  include: { phase: {% if phase_train %}TRAIN{%else%}TEST{%endif%} }
+}
+{% endmacro %}
