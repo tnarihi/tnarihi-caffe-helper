@@ -93,7 +93,7 @@ def get_solver_prototxt(net,
     """
     kw = locals().copy()
     path_solver = convert_prototxt_template(
-        pj(dir_template, 'solver.prototxt.jinja2'), **kw)
+        pj(ch.dir_template, 'solver.prototxt.jinja2'), **kw)
     return path_solver
 
 
