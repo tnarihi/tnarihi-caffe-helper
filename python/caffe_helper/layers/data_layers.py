@@ -1,6 +1,7 @@
+from concurrent.futures import ProcessPoolExecutor
 import csv
 from logging import getLogger, StreamHandler, DEBUG, INFO
-from multiprocessing.pool import ThreadPool
+
 import os
 import threading
 import time
@@ -155,6 +156,12 @@ class BaseDataLayer(Layer):
         raise NotImplementedError()
 
 
+def _process_load_image(args):
+    path_img, transformer = args
+    img = cv2.imread(path_img)
+    return transformer.transform(img)
+
+
 class ImageDataLayer(BaseDataLayer):
 
     logger = getLogger('ImageDataLayer')
@@ -209,18 +216,14 @@ class ImageDataLayer(BaseDataLayer):
                 self.at_ = 0
                 index = self.index_[self.at_]
                 self.at_ += 1
-            images += self.lines_[index],
+            images += self.root_ + self.lines_[index],
         # Load images in parallel
-        p = ThreadPool(self.num_thread_)
-
-        def _thread_fun(index):
-            ts = time.clock()
-            img = cv2.imread(self.root_ + images[index])
-            self.logger.debug(
-                "imread takes {} ms".format(1000 * (time.clock() - ts)))
-            img = self.transformer_.transform(img)
-            self.data_[index, ...] = img
-        p.map(_thread_fun, xrange(self.batch_size_))
+        with ProcessPoolExecutor(self.num_thread_) as executor:
+            for index, img in enumerate(executor.map(
+                _process_load_image,
+                zip(images, [self.transformer_] * len(images))
+            )):
+                self.data_[index] = img
         self.logger.debug(
             'read a batch takes {} ms'.format(1000 * (time.clock() - tsw)))
 
