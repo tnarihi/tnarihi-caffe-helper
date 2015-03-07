@@ -136,6 +136,7 @@ class BaseDataLayer(Layer):
         param = eval(self.param_str_)
         self.batch_size_ = param['batch_size']
         self.data_setup(bottom, top)
+        top[0].reshape(*self.data_.shape)
         self.thread_ = threading.Thread(target=self.internal_thread_entry)
         self.thread_.start()
 
