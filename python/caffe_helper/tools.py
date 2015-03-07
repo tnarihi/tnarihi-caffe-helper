@@ -88,7 +88,7 @@ def get_solver_prototxt(net,
                         display=50, momentum=0.9,
                         weight_decay=1e-6, snapshot=100, debug_info=False,
                         accum_grad=1, share_blobs=True,
-                        force_cpu_momentum=False):
+                        force_cpu_momentum=False, lr_policy="fixed", power=0.5):
     """
     """
     kw = locals().copy()

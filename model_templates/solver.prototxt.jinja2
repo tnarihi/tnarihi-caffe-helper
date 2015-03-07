@@ -15,7 +15,8 @@ momentum: {{ momentum|d(0.9) }}
 weight_decay: {{ weight_decay|d(0.000001) }}
 snapshot: {{ snapshot|d(1000) }}
 snapshot_prefix: "{{snapshot_prefix}}"
-lr_policy: "fixed"
+lr_policy: "{{lr_policy|d("fixed")}}"
+power: {{power|d(0.5)}}
 {% if debug_info|d(false) %}debug_info: true{% endif %}
 {% set accum_grad = accum_grad|d(1) %}
 {% if accum_grad > 1 %}iter_size: {{ accum_grad }}{% endif %}
