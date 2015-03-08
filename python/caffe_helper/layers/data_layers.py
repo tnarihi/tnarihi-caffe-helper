@@ -215,7 +215,7 @@ class ImageDataLayer(BaseDataLayer):
                 if self.shuffle_:
                     self.rng_.shuffle(self.indexes_)
                 self.at_ = 0
-                index = self.index_[self.at_]
+                index = self.indexes_[self.at_]
                 self.at_ += 1
             images += self.root_ + self.lines_[index],
         # Load images in parallel
