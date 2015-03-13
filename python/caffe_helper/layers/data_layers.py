@@ -86,16 +86,17 @@ class ImageTransformer(object):
             except:
                 hcrop = wcrop = self.crop_size_
             h, w, _ = img.shape
-            if self.random_crop_:
-                hoff = self.rng_.randint(0, h - hcrop + 1)
-                woff = self.rng_.randint(0, w - wcrop + 1)
-                self.logger.debug(
-                    "transform crop random (%d, %d)" % (hoff, woff))
-            else:
-                hoff = (h - hcrop) / 2
-                woff = (w - wcrop) / 2
-                self.logger.debug("transform crop")
-            img = img[hoff:hoff + hcrop, woff:woff + wcrop]
+            if h != hcrop or w != wcrop:
+                if self.random_crop_:
+                    hoff = self.rng_.randint(0, h - hcrop + 1)
+                    woff = self.rng_.randint(0, w - wcrop + 1)
+                    self.logger.debug(
+                        "transform crop random (%d, %d)" % (hoff, woff))
+                else:
+                    hoff = (h - hcrop) / 2
+                    woff = (w - wcrop) / 2
+                    self.logger.debug("transform crop")
+                img = img[hoff:hoff + hcrop, woff:woff + wcrop]
 
         # MIRROR
         if self.mirror_:
