@@ -68,11 +68,8 @@ class ImageTransformer(object):
         """"""
         ts = time.clock()
         # COLOR
-        if img.ndim == 2:
-            if self.color_:
-                img = np.repeat(img, 3, 2)
-            else:
-                img = img[:, :, np.newaxis]
+        if not self.color_:
+            img = img.mean(2)[..., np.newaxis]
             self.logger.debug("transform color")
         if self.height_ > 0 and self.width_ > 0:
             img = cv2.resize(img, (self.width_, self.height_))
