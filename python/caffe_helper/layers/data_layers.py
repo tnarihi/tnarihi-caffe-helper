@@ -157,6 +157,8 @@ class BaseDataLayer(Layer):
 def _process_load_image(args):
     path_img, transformer = args
     img = cv2.imread(path_img)
+    if img is None:
+        raise ValueError("File not exists or corrupted: %s" % path_img)
     return transformer.transform(img)
 
 
