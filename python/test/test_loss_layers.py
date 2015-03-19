@@ -6,25 +6,6 @@ import caffe
 from caffe.proto import caffe_pb2
 from caffe.gradient_check_util import GradientChecker
 
-@pytest.fixture(scope="session")
-def blob_4_2322(request):
-    print "Call:", request.fixturename
-    shape = [2, 3, 2, 2]
-    return [caffe.Blob(shape) for i in xrange(4)]
-
-
-@pytest.fixture(scope="function")
-def blob_4_2322_init(request, blob_4_2322):
-    print "Call:", request.fixturename
-    pred, label, mask, top = blob_4_2322
-    shape = pred.shape
-    rng = np.random.RandomState(313)
-    pred.data[...] = rng.rand(*shape) + 0.01  # > 0
-    label.data[...] = rng.rand(*shape) + 0.01  # > 0
-    mask.data[...] = rng.rand(*shape) > 0.2  # 80% and avoid 0 div
-    mask.data[mask.data.reshape(mask.shape[0], -1).sum(1) == 0, 0, 0, 0] = 1
-    return pred, label, mask, top
-
 
 @pytest.fixture(scope="module")
 def sil2_loss_layer(request, blob_4_2322):
