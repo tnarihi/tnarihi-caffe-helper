@@ -68,10 +68,6 @@ class ImageTransformer(object):
     def transform(self, img):
         """"""
         ts = time.clock()
-        # COLOR
-        if not self.color_:
-            img = img.mean(2)[..., np.newaxis]
-            self.logger.debug("transform color")
         if self.height_ > 0 and self.width_ > 0:
             img = cv2.resize(img, (self.width_, self.height_))
             self.logger.debug("transform resize")
@@ -98,12 +94,15 @@ class ImageTransformer(object):
                     woff = (w - wcrop) / 2
                     self.logger.debug("transform crop")
                 img = img[hoff:hoff + hcrop, woff:woff + wcrop]
-
         # MIRROR
         if self.mirror_:
             if self.rng_mirror_.randint(0, 2):
                 img = img[:, ::-1]
                 self.logger.debug("transform mirror")
+        # COLOR
+        if not self.color_:
+            img = img.mean(2)[..., np.newaxis]
+            self.logger.debug("transform color")
         # FLOAT
         img = img.astype('float32')
         # SUBTRACT
