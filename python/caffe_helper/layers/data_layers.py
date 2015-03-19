@@ -40,7 +40,8 @@ class ImageTransformer(object):
         self.height_ = param.get('height', -1)
         self.width_ = param.get('width', -1)
         self.channel_swap_ = param.get('channel_swap', None)
-        self.rng_ = np.random.RandomState(self.random_seed_)
+        self.rng_mirror_ = np.random.RandomState(self.random_seed_)
+        self.rng_crop_ = np.random.RandomState(self.random_seed_ + 1)
         self.logger.info(
             (os.linesep + '    ').join(
                 map(lambda kv: "%s = %s" % (kv[0], kv[1]),
@@ -88,8 +89,8 @@ class ImageTransformer(object):
             h, w, _ = img.shape
             if h != hcrop or w != wcrop:
                 if self.random_crop_:
-                    hoff = self.rng_.randint(0, h - hcrop + 1)
-                    woff = self.rng_.randint(0, w - wcrop + 1)
+                    hoff = self.rng_crop_.randint(0, h - hcrop + 1)
+                    woff = self.rng_crop_.randint(0, w - wcrop + 1)
                     self.logger.debug(
                         "transform crop random (%d, %d)" % (hoff, woff))
                 else:
@@ -100,7 +101,7 @@ class ImageTransformer(object):
 
         # MIRROR
         if self.mirror_:
-            if self.rng_.randint(0, 2):
+            if self.rng_mirror_.randint(0, 2):
                 img = img[:, ::-1]
                 self.logger.debug("transform mirror")
         # FLOAT
