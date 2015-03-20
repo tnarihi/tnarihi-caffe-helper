@@ -5,8 +5,8 @@ optional params:
 	momentum=0.9, weight_decay=0.000001, snapshot=1000, debug_info=false
 #}
 net: "{{net}}"
-test_iter: {{ test_iter|d(200) }}
-test_interval: {{ test_interval|d(1000) }}
+{% if test_iter|d(none) is not none %}test_iter: {{ test_iter }}{%endif%}
+{% if test_interval|d(none) is not none %}test_interval: {{ test_interval }}{%endif%}
 base_lr: {{ base_lr|d(0.001) }}
 display: {{ display|d(50) }}
 average_loss: {{ display|d(50) }}
