@@ -4,6 +4,7 @@ from pycuda.elementwise import ElementwiseKernel
 from caffe import Layer
 import caffe.pycuda_util as pu
 
+
 class ReshapeLayer(Layer):
 
     """Reshape
@@ -15,6 +16,7 @@ class ReshapeLayer(Layer):
         param = eval(self.param_str_)
         self.shape_ = param['shape']
         self.bottom_shape_ = bottom[0].data.shape
+        assert np.prod(self.bottom_shape_) == np.prod(self.shape_)
         self.reshape(bottom, top)
 
     def reshape(self, bottom, top):
@@ -47,6 +49,7 @@ class DownSamplingLayer(Layer):
     def backward(self, top, propagate_down, bottom):
         if propagate_down[0]:
             bottom[0].diff[:, :, ::self.factor_, ::self.factor_] = top[0].diff
+
 
 class LogLayer(Layer):
 
