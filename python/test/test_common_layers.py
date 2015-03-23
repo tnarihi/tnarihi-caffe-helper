@@ -6,11 +6,13 @@ import caffe
 from caffe.proto import caffe_pb2
 from caffe.gradient_check_util import GradientChecker
 
+
 @pytest.fixture(scope="function")
 def blob_inplace_init(blob_4_2322):
     b, _, _, t = blob_4_2322
     t.reshape(*b.shape)
     return [t], [t]
+
 
 @pytest.fixture(scope="module")
 def reshape_layer(blob_4_2322):
@@ -29,6 +31,7 @@ def reshape_layer(blob_4_2322):
     layer.SetUp(bottom, top)
     return layer
 
+
 def test_reshape_layer_forward(reshape_layer, blob_inplace_init):
     layer = reshape_layer
     bottom, top = blob_inplace_init
@@ -38,6 +41,7 @@ def test_reshape_layer_forward(reshape_layer, blob_inplace_init):
     assert bottom[0].shape == top[0].shape
     assert top[0].shape == layer.shape_
     assert np.all(bottom[0].data.flat == bak.flat)
+
 
 def test_reshape_layer_backward(reshape_layer, blob_inplace_init):
     layer = reshape_layer
@@ -50,3 +54,57 @@ def test_reshape_layer_backward(reshape_layer, blob_inplace_init):
     assert bak.shape == top[0].shape
     assert np.all(bottom[0].diff.flat == bak.flat)
 
+
+
+@pytest.fixture(scope="module",
+                params=[(False, False), (False, True),
+                        (True, False), (True, True)])
+def matrix_mult_layer(request):
+    m1 = caffe.Blob((2, 4, 2))
+    m2 = caffe.Blob((2, 2, 3))
+    t = caffe.Blob([])
+    t1, t2 = request.param
+    if t1:
+        s = m1.shape
+        m1.reshape(s[0], s[2], s[1])
+    if t2:
+        s = m2.shape
+        m2.reshape(s[0], s[2], s[1])
+    rng = np.random.RandomState(313)
+    m1.data[...] = rng.randn(*m1.shape)
+    m2.data[...] = rng.randn(*m2.shape)
+    bottom = [m1, m2]
+    top = [t]
+    # Create Layer
+    lp = caffe_pb2.LayerParameter()
+    lp.type = "Python"
+    lp.python_param.module = "caffe_helper.layers.common_layers"
+    lp.python_param.layer = "MatrixMultLayer"
+    lp.python_param.param_str = str({'t1':  t1, 't2': t2})
+    layer = caffe.create_layer(lp)
+    layer.SetUp(bottom, top)
+    return layer, bottom, top, request.param
+
+
+def test_matrix_mult_layer_forward(matrix_mult_layer):
+    layer, bottom, top, param = matrix_mult_layer
+    m1, m2 = bottom
+    m1, m2 = m1.data.copy(), m2.data.copy()
+    mo = np.zeros(top[0].shape, np.float32)
+    for b in xrange(bottom[0].shape[0]):
+        x, y = m1[b], m2[b]
+        if param[0]:
+            x = x.T
+        if param[1]:
+            y = y.T
+        mo[b][...] = np.dot(x, y)
+    layer.Reshape(bottom, top)
+    layer.Forward(bottom, top)
+    assert np.allclose(mo, top[0].data)
+
+
+def test_matrix_mult_layer_backward(matrix_mult_layer):
+    layer, bottom, top, _ = matrix_mult_layer
+    checker = GradientChecker(1e-3, 1e-2)
+    checker.check_gradient_exhaustive(
+        layer, bottom, top)
