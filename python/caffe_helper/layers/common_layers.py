@@ -143,3 +143,39 @@ class MatrixMultLayer(Layer):
                     linalg.dot(x, y,
                                transa=blas_trans(t1_), transb=blas_trans(t2_),
                                handle=h, out=diff[b])
+
+
+class ParameterLayer(Layer):
+
+    """
+    ParameterLayer is holding a parameter blob and feeds the data of the blob
+    to the top blob directly. Note this always accumulates param grad, so it
+    needs accum-grad branch.
+    """
+
+    def setup(self, bottom, top):
+        param = eval(self.param_str_)
+        self.shape_ = param['shape']
+        assert len(bottom) == 0
+        assert len(top) == 1
+        self.reshape(bottom, top)
+
+        # Initialize parameter
+        if len(self.blobs) > 0:
+            assert self.blobs[0].shape == self.shape_
+            return
+        seed = param.get('seed', 313)
+        rng = np.random.RandomState(seed)
+        # filler must be a form of lambda shape, rng: <operation>
+        filler = eval(param['filler'])
+        self.blobs.append(caffe.Blob(self.shape_))
+        self.blobs[0].data[...] = filler(top[0].data.shape, rng)
+
+    def reshape(self, bottom, top):
+        top[0].reshape(*self.shape_)
+
+    def forward(self, bottom, top):
+        top[0].data[...] = self.blobs[0].data
+
+    def backward(self, top, propagate_down, bottom):
+        self.blobs[0].diff[...] += top[0].diff

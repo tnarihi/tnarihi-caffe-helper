@@ -55,7 +55,6 @@ def test_reshape_layer_backward(reshape_layer, blob_inplace_init):
     assert np.all(bottom[0].diff.flat == bak.flat)
 
 
-
 @pytest.fixture(scope="module",
                 params=[(False, False), (False, True),
                         (True, False), (True, True)])
@@ -106,5 +105,29 @@ def test_matrix_mult_layer_forward(matrix_mult_layer):
 def test_matrix_mult_layer_backward(matrix_mult_layer):
     layer, bottom, top, _ = matrix_mult_layer
     checker = GradientChecker(1e-3, 1e-2)
+    checker.check_gradient_exhaustive(
+        layer, bottom, top)
+
+
+def test_parameter_layer():
+    t = caffe.Blob([])
+    bottom = []
+    top = [t]
+    # Create Layer
+    lp = caffe_pb2.LayerParameter()
+    lp.type = "Python"
+    lp.python_param.module = "caffe_helper.layers.common_layers"
+    lp.python_param.layer = "ParameterLayer"
+    lp.python_param.param_str = str(dict(
+        shape=(2, 3, 2, 2),
+        filler="lambda shape, rng: rng.randn(*shape) * 0.01"))
+    layer = caffe.create_layer(lp)
+    layer.SetUp(bottom, top)
+    assert len(layer.blobs) == 1
+    assert layer.blobs[0].shape == (2, 3, 2, 2)
+    param_copy = layer.blobs[0].data.copy()
+    layer.Forward(bottom, top)
+    assert np.allclose(top[0].data, param_copy)
+    checker = GradientChecker(1e-3, 1e-5)
     checker.check_gradient_exhaustive(
         layer, bottom, top)
