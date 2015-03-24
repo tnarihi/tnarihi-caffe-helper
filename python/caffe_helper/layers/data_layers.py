@@ -65,8 +65,14 @@ class ImageTransformer(object):
     def out_shape(self):
         return self.out_shape_
 
-    def transform(self, img):
+    def transform(self, img, rng_crop=None, rng_mirror=None):
         """"""
+        # To support multi process
+        if rng_crop is None:
+            rng_crop = self.rng_crop_
+        if rng_mirror is None:
+            rng_mirror = self.rng_mirror_
+
         ts = time.clock()
         if self.height_ > 0 and self.width_ > 0:
             img = cv2.resize(img, (self.width_, self.height_))
@@ -85,8 +91,8 @@ class ImageTransformer(object):
             h, w, _ = img.shape
             if h != hcrop or w != wcrop:
                 if self.random_crop_:
-                    hoff = self.rng_crop_.randint(0, h - hcrop + 1)
-                    woff = self.rng_crop_.randint(0, w - wcrop + 1)
+                    hoff = rng_crop.randint(0, h - hcrop + 1)
+                    woff = rng_crop.randint(0, w - wcrop + 1)
                     self.logger.debug(
                         "transform crop random (%d, %d)" % (hoff, woff))
                 else:
@@ -96,7 +102,7 @@ class ImageTransformer(object):
                 img = img[hoff:hoff + hcrop, woff:woff + wcrop]
         # MIRROR
         if self.mirror_:
-            if self.rng_mirror_.randint(0, 2):
+            if rng_mirror.randint(0, 2):
                 img = img[:, ::-1]
                 self.logger.debug("transform mirror")
         # COLOR
@@ -156,11 +162,11 @@ class BaseDataLayer(Layer):
 
 
 def _process_load_image(args):
-    path_img, transformer = args
+    path_img, transformer, rng_crop, rng_mirror = args
     img = cv2.imread(path_img)
     if img is None:
         raise ValueError("File not exists or corrupted: %s" % path_img)
-    return transformer.transform(img)
+    return transformer.transform(img, rng_crop=rng_crop, rng_mirror=rng_mirror)
 
 
 class ImageDataLayer(BaseDataLayer):
@@ -220,9 +226,18 @@ class ImageDataLayer(BaseDataLayer):
             images += self.root_ + self.lines_[index],
         # Load images in parallel
         with ProcessPoolExecutor(self.num_thread_) as executor:
+            rng_crop = [
+                np.random.RandomState(seed)
+                for seed in self.transformer_.rng_crop_.randint(
+                    0, 2**32-1, (len(images), 2))]
+            rng_mirror = [
+                np.random.RandomState(seed)
+                for seed in self.transformer_.rng_mirror_.randint(
+                    0, 2**32-1, (len(images), 2))]
             for index, img in enumerate(executor.map(
                 _process_load_image,
-                zip(images, [self.transformer_] * len(images))
+                zip(images, [self.transformer_] * len(images),
+                    rng_crop, rng_mirror)
             )):
                 self.data_[index] = img
         self.logger.debug(
