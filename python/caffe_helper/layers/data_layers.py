@@ -1,9 +1,8 @@
-from concurrent.futures import ProcessPoolExecutor
+from concurrent.futures import ProcessPoolExecutor, ThreadPoolExecutor
 import csv
 from logging import getLogger, StreamHandler, DEBUG, INFO
 
 import os
-import threading
 import time
 
 import numpy as np
@@ -141,18 +140,17 @@ class BaseDataLayer(Layer):
         self.batch_size_ = param['batch_size']
         self.data_setup(bottom, top)
         top[0].reshape(*self.data_.shape)
-        self.thread_ = threading.Thread(target=self.internal_thread_entry)
-        self.thread_.start()
+        self.executor_ = ThreadPoolExecutor(max_workers=1)
+        self.thread_ = self.executor_.submit(self.internal_thread_entry)
 
     def reshape(self, bottom, top):
         pass
 
     def forward(self, bottom, top):
-        self.thread_.join()
+        self.thread_.result()
         top[0].reshape(*self.data_.shape)
         top[0].data[...] = self.data_
-        self.thread_ = threading.Thread(target=self.internal_thread_entry)
-        self.thread_.start()
+        self.thread_ = self.executor_.submit(self.internal_thread_entry)
 
     def data_setup(self, bottom, top):
         raise NotImplementedError()
@@ -160,6 +158,10 @@ class BaseDataLayer(Layer):
     def internal_thread_entry(self):
         raise NotImplementedError()
 
+    def __del__(self):
+        self.thread_.result()
+        self.executor_.shutdown()
+        super(self.__class__, self).__del__()
 
 def _process_load_image(args):
     path_img, transformer, rng_crop, rng_mirror = args
