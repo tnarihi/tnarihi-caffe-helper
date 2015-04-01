@@ -66,5 +66,11 @@ def set_verbose(verbose_):
     global verbose
     verbose = verbose_
 
+def add_jinja2_path(p):
+    from os.path import abspath
+    from jinja2 import FileSystemLoader, ChoiceLoader
+    global j2env
+    j2env.loader = ChoiceLoader([j2env.loader, FileSystemLoader(abspath(p))])
+
 import caffe_helper.tools
 import caffe_helper.visualize
