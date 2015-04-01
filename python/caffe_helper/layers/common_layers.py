@@ -16,12 +16,22 @@ class ReshapeLayer(Layer):
     def setup(self, bottom, top):
         param = eval(self.param_str_)
         self.shape_ = param['shape']
-        self.bottom_shape_ = bottom[0].data.shape
-        assert np.prod(self.bottom_shape_) == np.prod(self.shape_)
+        for i, s in enumerate(self.shape_):
+            if i != 0 and s < 0:
+                raise ValueError(
+                    "-1 is only allowed at 1st axis: %s" % str(self.shape_))
+        if self.shape_[0] < 0:
+            assert np.prod(self.shape_[1:]) == np.prod(bottom[0].shape[1:])
+        else:
+            assert np.prod(self.shape_) == np.prod(bottom[0].shape)
         self.reshape(bottom, top)
 
     def reshape(self, bottom, top):
-        top[0].reshape(*self.shape_)
+        self.bottom_shape_ = bottom[0].shape
+        if self.shape_[0] < 0:
+            top[0].reshape(self.bottom_shape_[0], *self.shape_[1:])
+        else:
+            top[0].reshape(*self.shape_)
 
     def forward(self, bottom, top):
         pass
