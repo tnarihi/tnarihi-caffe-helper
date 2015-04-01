@@ -1,4 +1,5 @@
 import pytest
+
 import numpy as np
 import caffe
 
@@ -31,11 +32,11 @@ def get_name(request):
 
 def set_caffe_dev(request):
     name = get_name(request)
-    if request.config.option.caffe_cpu:
+    if request.config.getoption('caffe_cpu'):
         caffe.set_mode_cpu()
         print '"%s" run in cpu' % name
         return
-    device_id = request.config.option.caffe_gpu
+    device_id = request.config.getoption('caffe_gpu')
     caffe.set_mode_gpu()
     caffe.set_device(device_id)
     print '"%s" run in gpu %d' % (name, device_id)

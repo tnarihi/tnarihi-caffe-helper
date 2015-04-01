@@ -9,6 +9,8 @@ from caffe.gradient_check_util import GradientChecker
 
 @pytest.fixture(scope="module")
 def sil2_loss_layer(request, blob_4_2322):
+    if request.config.getoption('caffe_cpu'):
+        raise pytest.skip("ScaleInvariantL2LossLayer requires GPU")
     print "Call:", request.fixturename
     # Create blobs
     pred, label, mask, top = blob_4_2322

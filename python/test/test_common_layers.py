@@ -59,6 +59,8 @@ def test_reshape_layer_backward(reshape_layer, blob_inplace_init):
                 params=[(False, False), (False, True),
                         (True, False), (True, True)])
 def matrix_mult_layer(request):
+    if request.config.getoption('caffe_cpu'):
+        raise pytest.skip("MatrixMultLayer requires GPU")
     m1 = caffe.Blob((2, 4, 2))
     m2 = caffe.Blob((2, 2, 3))
     t = caffe.Blob([])
