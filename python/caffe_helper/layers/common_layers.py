@@ -189,3 +189,46 @@ class ParameterLayer(Layer):
 
     def backward(self, top, propagate_down, bottom):
         self.blobs[0].diff[...] += top[0].diff
+
+
+class ReductionLayer(Layer):
+
+    """
+    Parameters
+    ----------
+
+    :axis: Axis to be reduced
+    :op: Operation of reduction. "mean" is only supported so far.
+    """
+
+    def setup(self, bottom, top):
+        param = eval(self.param_str_)
+        self.axis_ = param['axis']
+        self.op_ = param['op']
+        if self.op_ not in ['mean']:
+            raise ValueError("Unsupported op type: %s" % self.op_)
+        self.reshape(bottom, top)
+
+    def reshape(self, bottom, top):
+        assert len(bottom) == 1
+        assert len(top) == 1
+        assert len(bottom[0].shape) >= self.axis_
+        shape = list(bottom[0].shape)
+        shape[self.axis_] = 1
+        top[0].reshape(*shape)
+
+    def forward(self, bottom, top):
+        if self.op_ == 'mean':
+            top[0].data[...] = \
+                bottom[0].data.mean(self.axis_).reshape(top[0].shape)
+        else:
+            raise ValueError("Unsupported op type: %s" % self.op_)
+
+    def backward(self, top, propagate_down, bottom):
+        if not propagate_down[0]:
+            return
+        if self.op_ == 'mean':
+            bottom[0].diff[...] = top[0].diff / bottom[0].shape[self.axis_]
+        else:
+            raise ValueError("Unsupported op type: %s" % self.op_)
+

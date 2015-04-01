@@ -131,3 +131,25 @@ def test_parameter_layer():
     checker = GradientChecker(1e-3, 1e-5)
     checker.check_gradient_exhaustive(
         layer, bottom, top)
+
+
+def test_reduction_layer_forward(blob_4_2322):
+    b, _, _, t = blob_4_2322
+    bottom = [b]
+    top = [t]
+    # Create Layer
+    lp = caffe_pb2.LayerParameter()
+    lp.type = "Python"
+    lp.python_param.module = "caffe_helper.layers.common_layers"
+    lp.python_param.layer = "ReductionLayer"
+    lp.python_param.param_str = str({'axis': 1, 'op': 'mean'})
+    layer = caffe.create_layer(lp)
+    layer.SetUp(bottom, top)
+    rng = np.random.RandomState(313)
+    b.data[...] = rng.randn(*b.shape)
+    layer.Reshape(bottom, top)
+    layer.Forward(bottom, top)
+    assert np.all(b.data.mean(layer.axis_).reshape(t.shape) == t.data)
+    checker = GradientChecker(1e-2, 1e-4)
+    checker.check_gradient_exhaustive(
+        layer, bottom, top)
