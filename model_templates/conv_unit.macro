@@ -6,7 +6,8 @@
   b_filler={"type": '"constant"', "value": 0},
   param_name=none,
   pool_kernel=3, pool_stride=2,
-  nonlin_type='ReLU', no_pool=false, no_norm=false)
+  nonlin_type='ReLU', no_pool=false, no_norm=false,
+  prelu_lr_mult=1)
 %}
 {% set conv_name = unit_name %}
 {% set nonlin_name = unit_name + '-nonlin' %}
@@ -49,6 +50,13 @@ layer {
   type: "{{nonlin_type}}"
   bottom: "{{ conv_name }}"
   top: "{{ conv_name }}"
+  {% if nonlin_type == 'PReLU' %}
+  param {
+    decay_mult: 0
+    lr_mult: {{prelu_lr_mult}}
+    {% if param_name is not none %}name: "{{ param_name }}_prelu"{%endif%}
+  }
+  {% endif %}
 }
 {% endif %}
 {% if not no_pool %}

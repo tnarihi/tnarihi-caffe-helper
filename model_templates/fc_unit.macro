@@ -6,7 +6,7 @@
   b_filler={"type": '"constant"', "value": 1},
   bias_term=true,
   param_name=none, nonlin_type='ReLU',
-  dropout_ratio=-1)
+  dropout_ratio=-1, prelu_lr_mult=1)
 %}
 {% set fc_name = unit_name %}
 {% set nonlin_name = unit_name + '-nonlin' %}
@@ -50,6 +50,7 @@ layer {
   {% if nonlin_type == 'PReLU' %}
   param {
     decay_mult: 0
+    lr_mult: {{prelu_lr_mult}}
     {% if param_name is not none %}name: "{{param_name}}_prelu"{%endif%}
   }
   {% endif %}
