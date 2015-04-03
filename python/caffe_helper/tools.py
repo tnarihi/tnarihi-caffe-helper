@@ -165,28 +165,6 @@ def get_output(blobs, proto_path, model_path,
 
 def save_output_hdf5(blobs, proto_path, model_path, path_out, path_names,
     h5mode='a', name_column=0, gpu=0, phase=None):
-    """
-    h5d = H5File(path_h5, h5mode)
-    for i, d in enumerate(dataset):
-        if i % 5000 == 0: print i,
-        name, label = d[0], int(d[1])
-        path = os.path.join(data_root, name)
-        if d[0] in h5d:
-            if not recompute:
-                continue
-            del h5d[d[0]]
-        try:
-            img = caffe.io.load_image(path)
-            score = net.predict((img, )).flatten()
-            h5d[d[0]] = score
-        except Exception as e:
-            import sys
-            print >> sys.stderr, 'Error in %s' % path
-            h5d.close()
-            raise e
-    print ''
-    h5d.close()
-    """
     import csv
     import caffe
     from h5py import File as H5File
@@ -203,8 +181,7 @@ def save_output_hdf5(blobs, proto_path, model_path, path_out, path_names,
         else:
             caffe.set_mode_gpu()
             caffe.set_device(gpu)
-        net = caffe.Net(proto_path, phase)
-        net.copy_from(model_path)
+        net = caffe.Net(proto_path, model_path, phase)
         outputs = dict(zip(blobs, [[] for i in xrange(len(blobs))]))
         i = 0
         while True:
