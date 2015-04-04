@@ -232,3 +232,36 @@ class ReductionLayer(Layer):
         else:
             raise ValueError("Unsupported op type: %s" % self.op_)
 
+
+class SliceByArrayLayer(Layer):
+
+    """
+    Slicing 1st axis with an integer array
+    """
+
+    def setup(self, bottom, top):
+        from scipy.io import loadmat
+        param = eval(self.param_str_)
+        self.indexes_ = loadmat(param['path_mat'])[param['key']].flatten()
+        assert np.unique(self.indexes_).size == self.indexes_.size, \
+            'Indexes must be unique each other.'
+        self.axis_ = param.get('axis', 1)
+        assert self.axis_ == 1, 'Now only axis=1 is supported.'
+        self.reshape(bottom, top)
+
+    def reshape(self, bottom, top):
+        assert len(bottom) == 1
+        assert len(top) == 1
+        assert len(bottom[0].shape) > self.axis_
+        shape = list(bottom[0].shape)
+        shape[self.axis_] = self.indexes_.size
+        top[0].reshape(*shape)
+
+    def forward(self, bottom, top):
+        top[0].data[...] = bottom[0].data[:, self.indexes_, ...]
+
+    def backward(self, top, propagate_down, bottom):
+        if not propagate_down[0]:
+            return
+        bottom[0].diff[...] = 0
+        bottom[0].diff[:, self.indexes_, ...] = top[0].diff

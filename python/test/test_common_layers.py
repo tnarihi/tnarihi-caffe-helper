@@ -155,3 +155,30 @@ def test_reduction_layer_forward(blob_4_2322):
     checker = GradientChecker(1e-2, 1e-4)
     checker.check_gradient_exhaustive(
         layer, bottom, top)
+
+
+def test_slice_by_array_layer(blob_4_2322, tmpdir):
+    path_indexes = tmpdir.join('indexes.mat').strpath
+    from scipy.io import savemat
+    indexes = np.array([2, 0])
+    savemat(path_indexes, {'indexes': indexes})
+    b, _, _, t = blob_4_2322
+    bottom = [b]
+    top = [t]
+    # Create Layer
+    lp = caffe_pb2.LayerParameter()
+    lp.type = "Python"
+    lp.python_param.module = "caffe_helper.layers.common_layers"
+    lp.python_param.layer = "SliceByArrayLayer"
+    lp.python_param.param_str = str(
+        {'path_mat': path_indexes, 'key': 'indexes'})
+    layer = caffe.create_layer(lp)
+    layer.SetUp(bottom, top)
+    rng = np.random.RandomState(313)
+    b.data[...] = rng.randn(*b.shape)
+    layer.Reshape(bottom, top)
+    layer.Forward(bottom, top)
+    assert np.all(top[0].data == bottom[0].data[:, indexes, ...])
+    checker = GradientChecker(1e-2, 1e-5)
+    checker.check_gradient_exhaustive(
+        layer, bottom, top)
