@@ -1,0 +1,13 @@
+{% macro upsampling(name, bottom, top, factor, channels) %}
+layer {
+  name: "{{name}}", type: "Deconvolution"
+  bottom: "{{bottom}}" top: "{{top}}"
+  convolution_param {
+    kernel_size: {{(2 * factor - factor % 2)|int}} stride: {{factor|int}}
+    num_output: {{channels}} group: {{channels}}
+    pad: {{((factor - 1) / 2.0)|round(method='ceil')|int}}
+    weight_filler: { type: "bilinear_upsampling" } bias_term: false
+  }
+  param { lr_mult: 0 decay_mult: 0 }
+}
+{% endmacro %}
