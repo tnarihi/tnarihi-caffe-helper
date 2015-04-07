@@ -78,8 +78,17 @@ class ImageTransformer(object):
             self.logger.debug("transform resize")
         # PAD
         if self.pad_:
-            img = cv2.copyMakeBorder(img, *((self.pad_,) * 4),
-                                     borderType=cv2.BORDER_CONSTANT)
+            try:
+                to, bo, le, ri = self.pad_
+            except:
+                try:
+                    tobo, leri = self.pad_
+                    to = bo = tobo
+                    le = ri = leri
+                except:
+                    to = bo = le = ri = self.pad_
+            img = cv2.copyMakeBorder(img, to, bo, le, ri,
+                                     borderType=cv2.BORDER_REFLECT)
             self.logger.debug("transform pad")
         # CROP
         if self.crop_size_ is not None:
