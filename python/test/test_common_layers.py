@@ -182,3 +182,28 @@ def test_slice_by_array_layer(blob_4_2322, tmpdir):
     checker = GradientChecker(1e-2, 1e-5)
     checker.check_gradient_exhaustive(
         layer, bottom, top)
+
+def test_broadcast_layer():
+    ba, c, h, w = [2, 1, 3, 4]
+    b, t = caffe.Blob([ba, c, h, w]), caffe.Blob([])
+    bottom = [b]
+    top = [t]
+    # Create Layer
+    lp = caffe_pb2.LayerParameter()
+    lp.type = "Python"
+    lp.python_param.module = "caffe_helper.layers.common_layers"
+    lp.python_param.layer = "BroadcastLayer"
+    lp.python_param.param_str = str(
+        {'axis': 1, 'num': 3})
+    layer = caffe.create_layer(lp)
+    layer.SetUp(bottom, top)
+    rng = np.random.RandomState(313)
+    b.data[...] = rng.randn(*b.shape)
+    layer.Reshape(bottom, top)
+    layer.Forward(bottom, top)
+    assert t.shape == (ba, 3, h, w)
+    for i in xrange(3):
+        assert np.all(b.data == t.data[:, i:i+1])
+    checker = GradientChecker(1e-2, 1e-5)
+    checker.check_gradient_exhaustive(
+        layer, bottom, top)
