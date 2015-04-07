@@ -101,7 +101,7 @@ __global__ void backward(float *pred, float *label, float *mask,
         with pu.caffe_cuda_context():
             h = caffe.cublas_handle()
             batch_size = bottom[0].shape[0]
-            dim = bottom[0].count / bottom[0].num
+            dim = bottom[0].count / bottom[0].shape[0]
             pred = bottom[0].data_as_pycuda_gpuarray()
             label = bottom[1].data_as_pycuda_gpuarray()
             mask = bottom[2].data_as_pycuda_gpuarray()
