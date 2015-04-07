@@ -247,7 +247,9 @@ class SliceByArrayLayer(Layer):
         bottom[0].diff[...] = 0
         bottom[0].diff[:, self.indexes_, ...] = top[0].diff
 
+
 class BroadcastLayer(Layer):
+
     def setup(self, bottom, top):
         param = eval(self.param_str_)
         self.axis_ = param['axis']
@@ -269,3 +271,31 @@ class BroadcastLayer(Layer):
         if not propagate_down[0]:
             return
         bottom[0].diff[...] = top[0].diff.sum(self.axis_, keepdims=True)
+
+
+class TileLayer(Layer):
+
+    def setup(self, bottom, top):
+        param = eval(self.param_str_)
+        self.axis_ = param['axis']
+        self.num_ = param['num']
+        self.reshape(bottom, top)
+
+    def reshape(self, bottom, top):
+        assert len(bottom) == 1
+        assert len(top) == 1
+        shape = list(bottom[0].shape)
+        shape[self.axis_] *= self.num_
+        top[0].reshape(*shape)
+
+    def forward(self, bottom, top):
+        reps = [1 for _ in bottom[0].shape]
+        reps[self.axis_] = self.num_
+        top[0].data[...] = np.tile(bottom[0].data, reps)
+
+    def backward(self, top, propagate_down, bottom):
+        if not propagate_down[0]:
+            return
+        shape = bottom[0].shape
+        shape2 = shape[:self.axis_] + (self.num_,) + shape[self.axis_:]
+        bottom[0].diff[...] = top[0].diff.reshape(shape2).sum(self.axis_)
