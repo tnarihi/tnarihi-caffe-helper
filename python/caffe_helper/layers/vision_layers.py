@@ -25,7 +25,10 @@ class DownSamplingLayer(Layer):
 class Gradient4Layer(Layer):
     """4-connected neighborhood gradient
     bottom: (B, C, H, W)
-    top: (B, 2, C, H - 1, W - 1)
+    top: (B, 2, C, H, W)
+    
+    Gradients for x-axis are stacked to 0-th index in 2nd axis, gradients for
+    y-axis are stacked to 1st index.
     """
 
     def setup(self, bottom, top):
