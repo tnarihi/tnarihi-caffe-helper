@@ -33,3 +33,33 @@ def test_graident_4_layer():
     checker.check_gradient_exhaustive(
         layer, bottom, top)
 
+
+def test_morphology_layer():
+    ba, c, h, w = (2, 3, 4, 4)
+    b = caffe.Blob([ba, c, h, w])
+    t = caffe.Blob([])
+    bottom = [b]
+    top = [t]
+    # Create Layer
+    lp = caffe_pb2.LayerParameter()
+    lp.type = "Python"
+    lp.python_param.module = "caffe_helper.layers.vision_layers"
+    lp.python_param.layer = "MorphologyLayer"
+    lp.python_param.param_str = str(dict(op='erode', kernel='4nn'))
+    layer = caffe.create_layer(lp)
+    layer.SetUp(bottom, top)
+    b.data[1, ...] = [[
+        [0, 1, 1, 0],
+        [1, 1, 1, 1],
+        [1, 1, 1, 1],
+        [0, 1, 1, 0],
+    ]]
+    layer.Reshape(bottom, top)
+    layer.Forward(bottom, top)
+    assert np.all(
+        top[0].data[1, ...] == [[
+            [0, 0, 0, 0],
+            [0, 1, 1, 0],
+            [0, 1, 1, 0],
+            [0, 0, 0, 0],
+        ]])
