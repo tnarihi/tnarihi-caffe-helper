@@ -14,7 +14,7 @@ by running:
 ```shell
 git clone git://github.com:tnarihi/caffe.git
 cd caffe
-git checkout -b master-snapshost origin/future
+git checkout -b future origin/future
 ```
 
 Once you get it, you will follow the installation of python dependencies in the
