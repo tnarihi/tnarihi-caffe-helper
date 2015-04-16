@@ -80,7 +80,7 @@ class SolverProtoCreator(ProtoCreator):
         if gpu >= 0:
             com += ["-gpu %d" % gpu]
         return ' '.join(
-            com + ['| tee %s' % (self._kw['snapshot_prefix'] + '.log')])
+            com + ['|& tee %s' % (self._kw['snapshot_prefix'] + '.log')])
 
 
 def convert_prototxt_template(path_template, path_proto=None, **proto_kw):
