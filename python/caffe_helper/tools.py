@@ -30,7 +30,11 @@ def save_output_hdf5(blobs, proto_path, model_path, path_out, path_names,
             for s in xrange(ret[blobs[0]].shape[0]):
                 if len(names) == i:
                     return
-                h5d.create_group(names[i])
+                try:
+                    h5d.create_group(names[i])
+                except ValueError:
+                    del h5d[names[i]]
+                    h5d.create_group(names[i])
                 for b in blobs:
                     h5d[names[i]][b] = ret[b][s].copy()
                 i += 1
