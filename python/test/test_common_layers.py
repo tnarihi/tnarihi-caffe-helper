@@ -237,3 +237,27 @@ def test_tile_layer():
     checker = GradientChecker(1e-2, 1e-5)
     checker.check_gradient_exhaustive(
         layer, bottom, top)
+
+
+def test_axpb_layer(blob_4_2322):
+    b, _, _, t = blob_4_2322
+    bottom = [b]
+    top = [t]
+    # Create Layer
+    va = 0.7
+    vb = -0.3
+    lp = caffe_pb2.LayerParameter()
+    lp.type = "Python"
+    lp.python_param.module = "caffe_helper.layers.common_layers"
+    lp.python_param.layer = "AXPBLayer"
+    lp.python_param.param_str = str({'a': va, 'b': vb})
+    layer = caffe.create_layer(lp)
+    layer.SetUp(bottom, top)
+    rng = np.random.RandomState(313)
+    b.data[...] = rng.randn(*b.shape)
+    layer.Reshape(bottom, top)
+    layer.Forward(bottom, top)
+    assert np.all(va * b.data + vb == t.data)
+    checker = GradientChecker(1e-3, 1e-2)
+    checker.check_gradient_exhaustive(
+        layer, bottom, top)

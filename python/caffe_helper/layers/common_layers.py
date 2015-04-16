@@ -299,3 +299,37 @@ class TileLayer(Layer):
         shape = bottom[0].shape
         shape2 = shape[:self.axis_] + (self.num_,) + shape[self.axis_:]
         bottom[0].diff[...] = top[0].diff.reshape(shape2).sum(self.axis_)
+
+
+class AXPBLayer(Layer):
+
+    def setup(self, bottom, top):
+        param = eval(self.param_str_)
+        self.a_ = param.get('a', 1.0)
+        self.b_ = param.get('b', 0.0)
+
+        # Initialize parameters
+        if len(self.blobs) > 0:
+            assert len(self.blobs) == 1
+            assert self.blobs[0].shape == (2,)
+            return
+        self.blobs.append(caffe.Blob([2, ]))
+        self.blobs[0].data[...] = [self.a_, self.b_]
+        self.reshape(bottom, top)
+
+    def reshape(self, bottom, top):
+        assert len(bottom) == 1
+        assert len(top) == 1
+        top[0].reshape(*bottom[0].shape)
+
+    def forward(self, bottom, top):
+        top[0].data[...] = self.blobs[0].data[0] * bottom[0].data  \
+            + self.blobs[0].data[1]
+
+    def backward(self, top, propagate_down, bottom):
+        # Propagate to param
+        self.blobs[0].diff[0] += np.sum(bottom[0].data * top[0].diff)
+        self.blobs[0].diff[1] += np.sum(top[0].diff)
+        if not propagate_down[0]:
+            return
+        bottom[0].diff[...] = self.blobs[0].data[0] * top[0].diff
