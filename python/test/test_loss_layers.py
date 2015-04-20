@@ -58,3 +58,35 @@ def test_sil2_loss_layer_backward(sil2_loss_layer, blob_4_2322_init):
     checker = GradientChecker(1e-2, 1e-2)
     checker.check_gradient_exhaustive(
         layer, bottom, top, check_bottom=[0, 1])
+
+
+def test_dssim_layer(request):
+    if request.config.getoption('caffe_cpu'):
+        raise pytest.skip("DSSIMLayer requires GPU")
+    x, y = np.ogrid[:5, :5]
+    img1 = np.sin(x / 5.0 * np.pi) * np.cos(y / 5.0 * np.pi)
+    img1 = np.repeat(img1[..., np.newaxis], 3, 2)
+    img1 = (img1 - img1.min()) / (img1.max() - img1.min())
+    rng = np.random.RandomState(313)
+    img2 = img1 + rng.randn(*img1.shape) * 0.2
+    img2[img2 > 1] = 1
+    img2[img2 < 0] = 0
+    bottom = [caffe.Blob([]), caffe.Blob([])]
+    top = [caffe.Blob([])]
+    img1 = img1.transpose(2, 0, 1)
+    img2 = img2.transpose(2, 0, 1)
+    bottom[0].reshape(*((1,) + img1.shape))
+    bottom[1].reshape(*((1,) + img2.shape))
+    # Create Layer
+    lp = caffe_pb2.LayerParameter()
+    lp.type = "Python"
+    lp.python_param.module = "caffe_helper.layers.loss_layers"
+    lp.python_param.layer = "DSSIMLayer"
+    lp.python_param.param_str = str({'hsize': 3})
+    layer = caffe.create_layer(lp)
+    layer.SetUp(bottom, top)
+    bottom[0].data[...] = img1[np.newaxis]
+    bottom[1].data[...] = img2[np.newaxis]
+    checker = GradientChecker(1e-3, 1e-2)
+    checker.check_gradient_exhaustive(
+        layer, bottom, top, check_bottom=[0, 1])

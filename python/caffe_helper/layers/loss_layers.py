@@ -11,6 +11,7 @@ import caffe.pycuda_util as pu
 
 dtype = np.float32
 
+
 class ScaleInvariantL2LossLayer(Layer):
 
     """Scale Invariant L2 Loss which is described in NYU-depth paper.
@@ -141,3 +142,94 @@ __global__ void backward(float *pred, float *label, float *mask,
                     self.k_backward_(
                         pred, label, mask, self.diff_sum_, self.mask_sum_, sgn,
                         diff)
+
+
+class DSSIMLayer(Layer):
+
+    def setup(self, bottom, top):
+        # assert caffe.check_mode_gpu()
+        # from theano.sandbox.cuda import use
+        # use('gpu%d' % caffe.get_device())
+        import theano as tn
+        import theano.tensor as T
+        from theano.tensor.signal.conv import conv2d
+        assert len(bottom) >= 2
+        assert len(bottom) <= 3
+        assert len(top) == 1
+        # parameter
+        self.K_ = [0.01, 0.03]
+        self.L_ = 1.0
+        param = eval(self.param_str_)
+        self.hsize_ = param.get('hsize', 11)
+        self.sigma_ = param.get('sigma', 1.5)
+        assert self.hsize_ % 2 == 1
+        hsize = self.hsize_
+        sigma = self.sigma_
+        C1 = (self.K_[0] * self.L_) ** 2
+        C2 = (self.K_[1] * self.L_) ** 2
+        # Creating gaussian filter
+        x = np.exp(-0.5 * ((np.arange(hsize) - int(hsize / 2)) ** 2) /
+                   (sigma ** 2))
+        filt = x.reshape(-1, 1) * x.reshape(1, -1)
+        filt /= filt.sum()
+
+        # Build a Theano function which computes SSIM and its gradients wrt two
+        # images
+        simg1_in = T.ftensor3()
+        simg2_in = T.ftensor3()
+
+        if len(bottom) > 2:
+            smask = T.ftensor3()
+            sk = T.sum(simg1_in * simg2_in * smask) \
+                / T.sum(simg1_in * simg1_in * smask)
+            simg1 = sk * simg1_in * smask
+            simg2 = simg2_in * smask
+        else:
+            sk = T.sum(simg1_in * simg2_in) \
+                / T.sum(simg1_in * simg1_in)
+            simg1 = sk * simg1_in
+            simg2 = simg2_in
+        sfilt = tn.shared(filt.astype(np.float32))
+        smu1 = conv2d(simg1, sfilt)
+        smu2 = conv2d(simg2, sfilt)
+        smu1_sq = smu1 * smu1
+        smu2_sq = smu2 * smu2
+        smu1_mu2 = smu1 * smu2
+        ssig1_sq = conv2d(simg1 * simg1, sfilt) - smu1_sq
+        ssig2_sq = conv2d(simg2 * simg2, sfilt) - smu2_sq
+        ssig12 = conv2d(simg1 * simg2, sfilt) - smu1_mu2
+        sssim = (
+            ((2 * smu1_mu2 + C1) * (2 * ssig12 + C2))
+            / ((smu1_sq + smu2_sq + C1) * (ssig1_sq + ssig2_sq + C2))
+        ).mean()
+        sdssim = (1 - sssim) / 2
+        gimg1, gimg2 = tn.grad(sdssim, [simg1_in, simg2_in])
+        if len(bottom) > 2:
+            self.fdssim_with_grad = tn.function(
+                [simg1_in, simg2_in, smask], [sdssim, gimg1, gimg2])
+        else:
+            self.fdssim_with_grad = tn.function(
+                [simg1_in, simg2_in], [sdssim, gimg1, gimg2])
+
+    def reshape(self, bottom, top):
+        assert bottom[0].shape == bottom[1].shape
+        assert len(bottom[0].shape) == 4
+        top[0].reshape()
+
+    def forward(self, bottom, top):
+        dssim = np.float64(0.0)
+        for i in xrange(bottom[0].shape[0]):
+            if len(bottom) > 2:
+                s, g1, g2 = self.fdssim_with_grad(
+                    bottom[0].data[i], bottom[1].data[i], bottom[2].data[i])
+            else:
+                s, g1, g2 = self.fdssim_with_grad(
+                    bottom[0].data[i], bottom[1].data[i])
+            dssim += s
+            bottom[0].diff[i] = g1 / bottom[0].shape[0]
+            bottom[1].diff[i] = g2 / bottom[1].shape[0]
+        top[0].data[...] = dssim / bottom[0].shape[0]
+
+    def backward(self, top, propagate_down, bottom):
+        bottom[0].diff[...] *= top[0].diff
+        bottom[1].diff[...] *= top[0].diff
