@@ -7,10 +7,11 @@
   param_name=none,
   pool_kernel=3, pool_stride=2,
   nonlin_type='ReLU', no_pool=false, no_norm=false,
-  prelu_lr_mult=1)
+  prelu_lr_mult=1, dropout_ratio=-1)
 %}
 {% set conv_name = unit_name %}
 {% set nonlin_name = unit_name + '-nonlin' %}
+{% set drop_name = unit_name + '-drop' %}
 {% set pool_name = unit_name + '-pool' %}
 {% set norm_name = unit_name + '-norm' %}
 layer {
@@ -57,6 +58,17 @@ layer {
     {% if param_name is not none %}name: "{{ param_name }}_prelu"{%endif%}
   }
   {% endif %}
+}
+{% endif %}
+{% if dropout_ratio > 0%}
+layer {
+  name: "{{drop_name}}"
+  type: "Dropout"
+  bottom: "{{conv_name}}"
+  top: "{{conv_name}}"
+  dropout_param {
+    dropout_ratio: {{dropout_ratio}}
+  }
 }
 {% endif %}
 {% if not no_pool %}
