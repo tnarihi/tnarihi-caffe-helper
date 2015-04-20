@@ -172,6 +172,7 @@ class BaseDataLayer(Layer):
         self.executor_.shutdown()
         super(self.__class__, self).__del__()
 
+
 def _process_load_image(args):
     try:
         path_img, transformer, rng_crop, rng_mirror = args
@@ -261,6 +262,53 @@ class ImageDataLayer(BaseDataLayer):
             self.data_[index] = _process_load_image((img, self.transformer_))
         self.logger.debug(
             'read a batch takes {} ms'.format(1000 * (time.clock() - tsw)))
+
+
+class HDF5Layer(BaseDataLayer):
+
+    def data_setup(self, bottom, top):
+        import h5py
+        param = eval(self.param_str_)
+        self.source_ = param['source']
+        self.path_h5_ = param['path_h5']
+        self.column_id_ = param.get('column_id_', 0)
+        self.shuffle_ = param.get('shuffle', False)
+        self.random_seed_ = param.get('random_seed', 313)
+        self.blob_name_ = param['blob_name']
+
+        with open(self.source_, 'r') as fd:
+            self.lines_ = filter(
+                lambda x: x,
+                map(lambda x: x[self.column_id_].strip(), csv.reader(fd)))
+        if not len(self.lines_):
+            raise ValueError("Dataset is empty.")
+        self.indexes_ = np.arange(len(self.lines_))
+        self.at_ = 0
+        if self.shuffle_:
+            self.rng_ = np.random.RandomState(self.random_seed_)
+            self.rng_.shuffle(self.indexes_)
+        self.hd_ = h5py.File(self.path_h5_, 'r')
+        self.data_ = np.zeros(
+            (self.batch_size_,)
+            + self.hd_[self.lines_[0]][self.blob_name_].shape, 'float32')
+
+    def __del__(self):
+        self.hd_.close()
+        super(HDF5Layer, self).__del__()
+
+    def internal_thread_entry(self):
+        # Batch images
+        for i in xrange(self.batch_size_):
+            try:
+                index = self.indexes_[self.at_]
+                self.at_ += 1
+            except IndexError:
+                if self.shuffle_:
+                    self.rng_.shuffle(self.indexes_)
+                self.at_ = 0
+                index = self.indexes_[self.at_]
+                self.at_ += 1
+            self.data_[i] = self.hd_[self.lines_[index]][self.blob_name_].value
 
 
 class ScalarDataLayer(BaseDataLayer):
