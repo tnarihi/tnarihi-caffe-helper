@@ -33,10 +33,13 @@ def save_output_hdf5(blobs, proto_path, model_path, path_out, path_names,
                 try:
                     h5d.create_group(names[i])
                 except ValueError:
-                    del h5d[names[i]]
-                    h5d.create_group(names[i])
+                    pass
                 for b in blobs:
-                    h5d[names[i]][b] = ret[b][s].copy()
+                    try:
+                        h5d[names[i]][b] = ret[b][s].copy()
+                    except (ValueError, RuntimeError):
+                        del h5d[names[i]][b]
+                        h5d[names[i]][b] = ret[b][s].copy()
                 i += 1
 
 
