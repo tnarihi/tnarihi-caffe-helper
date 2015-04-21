@@ -32,6 +32,9 @@ class ScaleInvariantL2LossLayer(Layer):
             self.k_squared_ = ElementwiseKernel(
                 "float *diff, float *diff2",
                 "diff2[i] = diff[i] * diff[i]", 'squared')
+            self.k_ensure_mask_sum_ = ElementwiseKernel(
+                "float *mask_sum",
+                "mask_sum[i] = max(mask_sum[i], 1.0f)", 'ensure_mask_sum')
             # This should be computed more faster by cublasSdot
             self.k_sum_ = ReductionKernel(
                 dtype, neutral="0",
@@ -121,6 +124,7 @@ __global__ void backward(float *pred, float *label, float *mask,
                        handle=h, out=self.diff2_sum_)
             linalg.dot(mask.reshape(batch_size, dim), self.multipier_sum_,
                        handle=h, out=self.mask_sum_)
+            self.k_ensure_mask_sum_(self.mask_sum_)
             term1 = self.k_div_sum_(self.diff2_sum_, self.mask_sum_)
             term2 = self.k_div_squared_sum_(self.diff_sum_, self.mask_sum_)
             top[0].data[...] = (term1.get() - self.lambda_ * term2.get()) \
