@@ -96,7 +96,7 @@ class ImageTransformer(object):
                 hcrop, wcrop = self.crop_size_
             except:
                 hcrop = wcrop = self.crop_size_
-            h, w, _ = img.shape
+            h, w = img.shape[:2]
             if h != hcrop or w != wcrop:
                 if self.random_crop_:
                     hoff = rng_crop.randint(0, h - hcrop + 1)
@@ -115,7 +115,9 @@ class ImageTransformer(object):
                 self.logger.debug("transform mirror")
         # COLOR
         if not self.color_:
-            img = img.mean(2)[..., np.newaxis]
+            if img.ndim == 3:
+               img = img.mean(2)
+            img = img[..., np.newaxis]
             self.logger.debug("transform color")
         # FLOAT
         img = img.astype('float32')
@@ -179,7 +181,12 @@ def _process_load_image(args):
     except:
         path_img, transformer = args
         rng_crop, rng_mirror = None, None
-    img = cv2.imread(path_img)
+    if path_img.endswith('.dpt'):
+        # dpt format file
+        import sintel_io
+        img = sintel_io.depth_read(path_img)
+    else:
+        img = cv2.imread(path_img)
     if img is None:
         raise ValueError("File not exists or corrupted: %s" % path_img)
     return transformer.transform(img, rng_crop=rng_crop, rng_mirror=rng_mirror)
