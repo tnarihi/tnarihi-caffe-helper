@@ -59,24 +59,28 @@ class ScaleInvariantL2LossLayer(Layer):
 #include <caffe/util/device_alternate.hpp>
 __global__ void backward(float *pred, float *label, float *mask,
   float *diff_sum, float *mask_sum, int count, int stride, int sgn,
-  float lambda, float *diff) {
+  int batch_size, float lambda, float loss_weight, float *diff) {
   CUDA_KERNEL_LOOP(i, count) {
-    diff[i] = mask[i] * 2.0f * sgn / mask_sum[i / stride]
-        * ((pred[i] - label[i])
+    diff[i] = loss_weight * mask[i] * 2.0f * sgn / mask_sum[i / stride]
+         / batch_size * ((pred[i] - label[i])
             - lambda / mask_sum[i / stride] * diff_sum[i / stride]);
   }
 }
 """, include_dirs=pu.caffe_include_dirs).get_function("backward")
-            func_backward.prepare("PPPPPiiifP")
+            func_backward.prepare("PPPPPiiiiffP")
 
-            def _func_backward(pred, label, mask, ds, ms, sgn, diff):
+            def _func_backward(pred, label, mask, ds, ms, sgn, loss_weight,
+                               diff):
                 bg = pu.block_and_grid(pred.size)
+                batch_size = pred.shape[0]
                 count = pred.size
                 stride = pred.size / pred.shape[0]
                 func_backward.prepared_call(
                     bg['grid'], bg['block'],
                     pred.gpudata, label.gpudata, mask.gpudata, ds.gpudata,
-                    ms.gpudata, count, stride, sgn, self.lambda_, diff.gpudata)
+                    ms.gpudata, count, stride, sgn, batch_size,
+                    self.lambda_, loss_weight,
+                    diff.gpudata)
             self.k_backward_ = _func_backward
         self.batch_size_ = 0
         self.dim_ = 0
@@ -145,7 +149,7 @@ __global__ void backward(float *pred, float *label, float *mask,
                     sgn = 1 if i == 0 else - 1
                     self.k_backward_(
                         pred, label, mask, self.diff_sum_, self.mask_sum_, sgn,
-                        diff)
+                        top[0].diff, diff)
 
 
 class DSSIMLayer(Layer):
