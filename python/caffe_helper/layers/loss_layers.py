@@ -24,6 +24,7 @@ class ScaleInvariantL2LossLayer(Layer):
         # parameter
         param = eval(self.param_str_)
         self.lambda_ = param['lambda']
+        self.clip_gradient_ = param.get('clip_gradient', None)
         # Create CUDA function
         with pu.caffe_cuda_context():
             self.k_masked_diff_ = ElementwiseKernel(
@@ -35,6 +36,12 @@ class ScaleInvariantL2LossLayer(Layer):
             self.k_ensure_mask_sum_ = ElementwiseKernel(
                 "float *mask_sum",
                 "mask_sum[i] = max(mask_sum[i], 1.0f)", 'ensure_mask_sum')
+            if self.clip_gradient_ is not None:
+                self.k_clip_gradient = ElementwiseKernel(
+                    "float *diff",
+                    "diff[i] = fmaxf(-{0}, fminf(diff[i], {0}))".format(
+                        self.clip_gradient_),
+                    'clip_gradient')
             # This should be computed more faster by cublasSdot
             self.k_sum_ = ReductionKernel(
                 dtype, neutral="0",
@@ -150,6 +157,8 @@ __global__ void backward(float *pred, float *label, float *mask,
                     self.k_backward_(
                         pred, label, mask, self.diff_sum_, self.mask_sum_, sgn,
                         top[0].diff, diff)
+                    if self.clip_gradient_ is not None:
+                        self.k_clip_gradient(diff)
 
 
 class DSSIMLayer(Layer):
