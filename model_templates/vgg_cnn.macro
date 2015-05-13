@@ -1,9 +1,10 @@
 {% from 'vgg_convs.macro' import vgg_convs %}
 {% from 'bvlc_fcs.macro' import bvlc_fcs %}
 {% from 'fc_unit.macro' import fc_unit %}
-{% macro vgg_cnn(input_name, prefix='', param_prefix='', no_fc8=false) %}
+{% macro vgg_cnn(input_name, prefix='', param_prefix='', no_fc8=false,
+	fc_lr=[1, 1]) %}
 {{vgg_convs(input_name, prefix, param_prefix)}}
-{{bvlc_fcs(prefix + 'conv5-pool', prefix, param_prefix)}}
+{{bvlc_fcs(prefix + 'conv5-pool', prefix, param_prefix, lr=fc_lr)}}
 {% if not no_fc8 %}{{
 	fc_unit('fc7', 'fc8', num=1000,
 		w_filler={'type': '"gaussian"', 'std': 0.01},
