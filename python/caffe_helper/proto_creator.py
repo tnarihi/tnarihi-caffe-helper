@@ -5,25 +5,49 @@ import caffe_helper as ch
 
 class ProtoCreator(object):
 
-    def __init__(self, proto_base, **kw):
+    def __init__(self, proto_base, params=None, **kw):
+        self._params = None
+        if params is not None:
+            self._params = params.copy()
         self._kw = kw.copy()
         self._proto_base = proto_base
 
-    def create(self, path_proto=None):
+    def get_param_str(self):
+        if self._params is not None:
+            return dict_stringify(self._params)
+        return ''
+
+    def create(self, path_proto=None, prefix_proto=None):
+        assert path_proto is None or prefix_proto is None, \
+            "Both of path_proto and prefix cannot be set."
+        if prefix_proto is not None:
+            path_proto = prefix_proto
+        kw = self._kw
+        if self._params is not None:
+            kw = dict(self._params, **kw)
+            path_proto += '+' + dict_stringify(self._params)
+        if prefix_proto is not None:
+            path_proto += '.prototxt'
         return convert_prototxt_template(
-            self.proto_base, path_proto=path_proto, **self._kw)
+            self.proto_base, path_proto=path_proto, **kw)
 
     def copy(self):
-        return self.__class__(proto_base=self.proto_base, **self._kw.copy())
+        return self.__class__(
+            proto_base=self.proto_base, params=self._params, **self._kw)
 
-    def update(self, **kw):
+    def update(self, params=None, **kw):
+        if params is not None:
+            if self._params is None:
+                self._params = params.copy()
+            else:
+                self._params.update(params)
         self._kw.update(**kw)
 
-    def copy_and_update(self, proto_base=None, **kw):
+    def copy_and_update(self, proto_base=None, params=None, **kw):
         cp = self.copy()
         if proto_base is not None:
             cp.proto_base = proto_base
-        cp.update(**kw)
+        cp.update(params=params, **kw)
         return cp
 
     @property
@@ -38,13 +62,23 @@ class ProtoCreator(object):
     def kw(self):
         return self._kw
 
+    @property
+    def params(self):
+        return self._params
+
 
 class SolverProtoCreator(ProtoCreator):
     SOLVER_PROTO_BASE = join(ch.dir_template, 'solver.prototxt.jinja2')
+    PARAMS = {
+        'base_lr': 0.001,
+        'momentum': 0.9,
+        'lr_policy': 'poly', 'power': 0.5,
+        }
+
     def __init__(
             self,
-            snapshot_prefix, max_iter, test_iter=200,
-            test_interval=100, base_lr=0.001,
+            snapshot_prefix, max_iter, test_iter=None,
+            test_interval=None, base_lr=0.001,
             display=50, momentum=0.9,
             weight_decay=1e-6, snapshot=100, debug_info=False,
             accum_grad=1, share_blobs=True,
@@ -61,7 +95,23 @@ class SolverProtoCreator(ProtoCreator):
     def proto_base(self, value):
         raise AttributeError("Assignment of `proto_base` is not allowed.")
 
+    def get_param_str(self):
+        params = {}
+        for k, v in self.PARAMS.iteritems():
+            if self._kw[k] != v:
+                params[k] = self._kw[k]
+        if params:
+            return dict_stringify(params)
+        return ''
+
     def create(self, net, path_proto=None):
+
+        if path_proto is None:
+            path_proto = self._kw['snapshot_prefix']
+            param_str = self.get_param_str()
+            if param_str:
+                path_proto += '+' + param_str
+            path_proto += '.solver.prototxt'
         self._kw.update({'net': net})
         return super(SolverProtoCreator, self).create(path_proto)
 
@@ -110,3 +160,17 @@ def get_solver_prototxt(net,
     path_solver = convert_prototxt_template(
         join(ch.dir_template, 'solver.prototxt.jinja2'), **kw)
     return path_solver
+
+
+def dict_stringify(net_params):
+    return '+'.join(
+        map(
+            lambda x: '='.join(
+                (
+                    str(x[0]).replace(' ', '_'),
+                    str(x[1]).replace(' ', '_')\
+                        .replace(',', '')\
+                        .replace('[', '')\
+                        .replace(']', ''))),
+            sorted(net_params.iteritems()))
+    )
