@@ -17,17 +17,21 @@ class ProtoCreator(object):
             return dict_stringify(self._params)
         return ''
 
+    def get_path_proto_base(self, prefix_proto):
+        path_proto = prefix_proto
+        if self._params is not None:
+            path_proto += '+' + dict_stringify(self._params)
+        return path_proto
+
     def create(self, path_proto=None, prefix_proto=None):
         assert path_proto is None or prefix_proto is None, \
             "Both of path_proto and prefix cannot be set."
         if prefix_proto is not None:
-            path_proto = prefix_proto
+            path_proto = self.get_path_proto_base(prefix_proto)
+            path_proto += '.prototxt'
         kw = self._kw
         if self._params is not None:
             kw = dict(self._params, **kw)
-            path_proto += '+' + dict_stringify(self._params)
-        if prefix_proto is not None:
-            path_proto += '.prototxt'
         return convert_prototxt_template(
             self.proto_base, path_proto=path_proto, **kw)
 
@@ -104,14 +108,16 @@ class SolverProtoCreator(ProtoCreator):
         if params:
             return dict_stringify(params)
         return ''
+    def get_path_proto_base(self):
+        path_proto = self._kw['snapshot_prefix']
+        param_str = self.get_param_str()
+        if param_str:
+            path_proto += '+' + param_str
+        return path_proto
 
     def create(self, net, path_proto=None):
-
         if path_proto is None:
-            path_proto = self._kw['snapshot_prefix']
-            param_str = self.get_param_str()
-            if param_str:
-                path_proto += '+' + param_str
+            path_proto = self.get_path_proto_base()
             path_proto += '.solver.prototxt'
         self._kw.update({'net': net})
         return super(SolverProtoCreator, self).create(path_proto)
