@@ -83,9 +83,10 @@ class SolverProtoCreator(ProtoCreator):
             weight_decay=1e-6, snapshot=100, debug_info=False,
             accum_grad=1, share_blobs=True,
             force_cpu_momentum=False, lr_policy="fixed", power=0.5,
-            proto_base=None, net=None):
+            proto_base=None, net=None, params=None):
         del proto_base
         del net
+        del params
         kw = locals().copy()
         del kw['self']
         proto_base = SolverProtoCreator.SOLVER_PROTO_BASE
