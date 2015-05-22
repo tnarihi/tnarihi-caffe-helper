@@ -175,23 +175,6 @@ class BaseDataLayer(Layer):
         super(self.__class__, self).__del__()
 
 
-def _process_load_image(args):
-    try:
-        path_img, transformer, rng_crop, rng_mirror = args
-    except:
-        path_img, transformer = args
-        rng_crop, rng_mirror = None, None
-    if path_img.endswith('.dpt'):
-        # dpt format file
-        import sintel_io
-        img = sintel_io.depth_read(path_img)
-    else:
-        img = cv2.imread(path_img)
-    if img is None:
-        raise ValueError("File not exists or corrupted: %s" % path_img)
-    return transformer.transform(img, rng_crop=rng_crop, rng_mirror=rng_mirror)
-
-
 class ImageDataLayer(BaseDataLayer):
 
     logger = getLogger('ImageDataLayer')
@@ -208,6 +191,16 @@ class ImageDataLayer(BaseDataLayer):
             random_crop=False, random_seed=313):
         """"""
         return locals()
+
+    def _read_image(self, path_img):
+        img = cv2.imread(path_img)
+        if img is None:
+            raise ValueError("File not exists or corrupted: %s" % path_img)
+        return img
+
+    def _read_and_transform_image(self, path_img):
+        img = self._read_image(path_img)
+        return self.transformer_.transform(img)
 
     def data_setup(self, bottom, top):
         param = eval(self.param_str_)
@@ -248,25 +241,8 @@ class ImageDataLayer(BaseDataLayer):
                 self.at_ += 1
             images += self.root_ + self.lines_[index],
         # Load images in parallel
-        """
-        with ProcessPoolExecutor(self.num_thread_) as executor:
-            rng_crop = [
-                np.random.RandomState(seed)
-                for seed in self.transformer_.rng_crop_.randint(
-                    0, 2**32-1, (len(images), 2))]
-            rng_mirror = [
-                np.random.RandomState(seed)
-                for seed in self.transformer_.rng_mirror_.randint(
-                    0, 2**32-1, (len(images), 2))]
-            for index, img in enumerate(executor.map(
-                _process_load_image,
-                zip(images, [self.transformer_] * len(images),
-                    rng_crop, rng_mirror)
-            )):
-                self.data_[index] = img
-        """
         for index, img in enumerate(images):
-            self.data_[index] = _process_load_image((img, self.transformer_))
+            self.data_[index] = self._read_and_transform_image(img)
         self.logger.debug(
             'read a batch takes {} ms'.format(1000 * (time.clock() - tsw)))
 
