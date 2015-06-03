@@ -186,7 +186,7 @@ class ReductionLayer(Layer):
         param = eval(self.param_str_)
         self.axis_ = param['axis']
         self.op_ = param['op']
-        if self.op_ not in ['mean']:
+        if self.op_ not in ['mean', 'sum']:
             raise ValueError("Unsupported op type: %s" % self.op_)
         self.reshape(bottom, top)
 
@@ -201,7 +201,10 @@ class ReductionLayer(Layer):
     def forward(self, bottom, top):
         if self.op_ == 'mean':
             top[0].data[...] = \
-                bottom[0].data.mean(self.axis_).reshape(top[0].shape)
+                bottom[0].data.mean(self.axis_, keepdims=True)
+        elif self.op_ == 'sum':
+            top[0].data[...] = \
+                bottom[0].data.sum(self.axis_, keepdims=True)
         else:
             raise ValueError("Unsupported op type: %s" % self.op_)
 
@@ -210,6 +213,8 @@ class ReductionLayer(Layer):
             return
         if self.op_ == 'mean':
             bottom[0].diff[...] = top[0].diff / bottom[0].shape[self.axis_]
+        elif self.op_ == 'sum':
+            bottom[0].diff[...] = top[0].diff
         else:
             raise ValueError("Unsupported op type: %s" % self.op_)
 
