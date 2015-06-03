@@ -1,3 +1,4 @@
+import itertools
 import numpy as np
 
 import pytest
@@ -177,6 +178,40 @@ def test_reduction_layer_sum(blob_4_2322):
     checker = GradientChecker(1e-2, 1e-4)
     checker.check_gradient_exhaustive(
         layer, bottom, top)
+
+
+@pytest.fixture(scope="module",
+                params=itertools.product(
+                    [None, 1, 2, 3], [1, 2]))
+def lpnorm_params(request):
+    return request.param
+
+
+def test_lp_normalization_layer(blob_4_2322, lpnorm_params):
+    axis, p = lpnorm_params
+    b, _, _, t = blob_4_2322
+    bottom = [b]
+    top = [t]
+    # Create Layer
+    lp = caffe_pb2.LayerParameter()
+    lp.type = "Python"
+    lp.python_param.module = "caffe_helper.layers.common_layers"
+    lp.python_param.layer = "LpNormalizationLayer"
+    lp.python_param.param_str = str({'axis': axis, 'p': p})
+    layer = caffe.create_layer(lp)
+    layer.SetUp(bottom, top)
+    rng = np.random.RandomState(313)
+    b.data[...] = rng.rand(*b.shape)
+    layer.Reshape(bottom, top)
+    layer.Forward(bottom, top)
+    if axis is None:
+        axis = tuple(range(1, len(bottom[0].shape)))
+    test_top = b.data / ((b.data**p).sum(axis, keepdims=True) ** (1./p))
+    assert np.allclose(test_top, t.data)
+    checker = GradientChecker(1e-3, 1e-2)
+    checker.check_gradient_exhaustive(
+        layer, bottom, top)
+
 
 def test_slice_by_array_layer(blob_4_2322, tmpdir):
     path_indexes = tmpdir.join('indexes.mat').strpath

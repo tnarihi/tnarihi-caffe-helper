@@ -219,6 +219,76 @@ class ReductionLayer(Layer):
             raise ValueError("Unsupported op type: %s" % self.op_)
 
 
+class LpNormalizationLayer(Layer):
+
+    """
+    Parameters
+    ----------
+
+    :axis: Axis to be normalized. None means normalize over all dimensions.
+    :p: if p=1, no abs L1 normalization. if p=2, l2 normalization
+
+    Forward
+    -------
+    z_i = x_i / (\sum_j x_j^p)^{1/p}
+    """
+
+    def build_theano_functions(self, bottom, top):
+        # building Theano functions
+        from caffe_helper.theano_util import init_theano
+        init_theano()
+
+        import theano as tn
+        import theano.tensor as T
+        p = np.float32(self.p_)
+        axis = self.axis_
+        if axis is None:
+            axis = tuple(range(1, len(bottom[0].shape)))
+
+        # blob to CudaNdArray
+        # Forward pass
+        Tensor = T.TensorType('float32', [False] * len(bottom[0].shape))
+        s_x = Tensor('x')  # bottom data
+        s_dz = Tensor('dz')  # top diff
+        s_z = s_x * (
+            (s_x**p).sum(axis, keepdims=True)**(np.float32(-1./p)))
+        # See http://goo.gl/wIVRsP for `tn.Out(x, borrow=True)`
+        self.f_forward = tn.function([s_x], tn.Out(s_z, borrow=True))
+
+        # Backward pass
+        s_l = (s_dz * s_z).sum()
+        s_grad = tn.grad(s_l, wrt=s_x)
+        self.f_backward = tn.function([s_x, s_dz], tn.Out(s_grad, borrow=True))
+
+    def setup(self, bottom, top):
+        param = eval(self.param_str_)
+        self.axis_ = param.get('axis', None)
+        self.p_ = param.get('p', 1)
+        self.reshape(bottom, top)
+        self.build_theano_functions(bottom, top)
+
+    def reshape(self, bottom, top):
+        assert len(bottom) == 1
+        assert len(top) == 1
+        if self.axis_ is not None:
+            assert len(bottom[0].shape) >= self.axis_
+        top[0].reshape(*bottom[0].shape)
+
+    def forward(self, bottom, top):
+        from caffe_helper.theano_util import blob_to_CudaNdArray
+        b, _ = blob_to_CudaNdArray(bottom[0])
+        t, _ = blob_to_CudaNdArray(top[0])
+        t[...] = self.f_forward(b)
+
+    def backward(self, top, propagate_down, bottom):
+        from caffe_helper.theano_util import blob_to_CudaNdArray
+        if not propagate_down[0]:
+            return
+        b, bdiff = blob_to_CudaNdArray(bottom[0])
+        _, tdiff = blob_to_CudaNdArray(top[0])
+        bdiff[...] = self.f_backward(b, tdiff)
+
+
 class SliceByArrayLayer(Layer):
 
     """
