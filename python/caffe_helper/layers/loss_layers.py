@@ -164,9 +164,9 @@ __global__ void backward(float *pred, float *label, float *mask,
 class DSSIMLayer(Layer):
 
     def setup(self, bottom, top):
-        # assert caffe.check_mode_gpu()
-        # from theano.sandbox.cuda import use
-        # use('gpu%d' % caffe.get_device())
+        from caffe_helper.theano_util import init_theano
+        init_theano()
+
         import theano as tn
         import theano.tensor as T
         from theano.tensor.signal.conv import conv2d
