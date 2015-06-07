@@ -17,9 +17,11 @@ def blob_to_CudaNdArray(b, diff=False):
     from theano.sandbox import cuda
     data_ptr = long(b.gpu_data_ptr)
     diff_ptr = long(b.gpu_diff_ptr)
-    strides = [1]
-    for i in b.shape[::-1][:-1]:
-        strides.append(strides[-1]*i)
-    strides = tuple(strides[::-1])
+    strides = tuple()
+    if len(b.shape) > 0:
+	    strides = [1]
+	    for i in b.shape[::-1][:-1]:
+	        strides.append(strides[-1]*i)
+	    strides = tuple(strides[::-1])
     return cuda.from_gpu_pointer(data_ptr, b.shape, strides, b), \
         cuda.from_gpu_pointer(diff_ptr, b.shape, strides, b)
