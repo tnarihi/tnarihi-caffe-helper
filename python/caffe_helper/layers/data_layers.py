@@ -32,6 +32,9 @@ class ImageTransformer(object):
         self.mirror_ = param.get('mirror', False)
         self.crop_size_ = param.get('crop_size', None)
         self.random_crop_ = param.get('random_crop', False)
+        self.random_scale_ = param.get('random_scale', None)
+        self.random_noise_ = param.get('random_noise', None)
+        self.random_rotation_ = param.get('random_rotation', None)
         self.mean_value_ = param.get('mean_value', None)
         self.scale_ = param.get('scale', None)
         self.color_ = param.get('color', True)
@@ -39,15 +42,22 @@ class ImageTransformer(object):
         self.height_ = param.get('height', -1)
         self.width_ = param.get('width', -1)
         self.channel_swap_ = param.get('channel_swap', None)
+        self.border_mode_ = getattr(
+            cv2, param.get('border_mode', 'BORDER_CONSTANT'))
         self.rng_mirror_ = np.random.RandomState(self.random_seed_)
         self.rng_crop_ = np.random.RandomState(self.random_seed_ + 1)
+        self.rng_scale_ = np.random.RandomState(self.random_seed_ + 2)
+        self.rng_noise_ = np.random.RandomState(self.random_seed_ + 3)
+        self.rng_rotation_ = np.random.RandomState(self.random_seed_ + 4)
+        self.check_params()
         self.logger.info(
             (os.linesep + '    ').join(
                 map(lambda kv: "%s = %s" % (kv[0], kv[1]),
                     filter(lambda kv: kv[0] in (
                         'random_seed_', 'mirror_', 'crop_size_', 'mean_value_',
                         'scale_', 'color_', 'pad_', 'height_', 'width_',
-                        'channel_swap_', 'random_crop_'),
+                        'channel_swap_', 'random_crop_', 'random_scale_',
+                        'random_noise', 'random_rotation',),
                     self.__dict__.iteritems()))))
         c = 3 if self.color_ else 1
         if self.crop_size_ is None:
@@ -60,17 +70,20 @@ class ImageTransformer(object):
                 h = w = self.crop_size_
         self.out_shape_ = (c, h, w)
 
+    def check_params(self):
+        """Check if parameters are set properly."""
+        assert self.random_noise_ is None or \
+            len(self.random_noise) == 2
+
     @property
     def out_shape(self):
         return self.out_shape_
 
-    def transform(self, img, rng_crop=None, rng_mirror=None):
+    def transform(self, img):
         """"""
-        # To support multi process
-        if rng_crop is None:
-            rng_crop = self.rng_crop_
-        if rng_mirror is None:
-            rng_mirror = self.rng_mirror_
+        rng_crop = self.rng_crop_
+        rng_mirror = self.rng_mirror_
+        border_mode = self.border_mode_
 
         ts = time.clock()
         if self.height_ > 0 and self.width_ > 0:
@@ -88,8 +101,21 @@ class ImageTransformer(object):
                 except:
                     to = bo = le = ri = self.pad_
             img = cv2.copyMakeBorder(img, to, bo, le, ri,
-                                     borderType=cv2.BORDER_REFLECT)
+                                     borderType=border_mode)
             self.logger.debug("transform pad")
+        # ROTATE and/or ROTATE
+        if self.random_rotation_ is not None or self.random_scale_ is not None:
+            center = tuple(np.array(img.shape[1::-1])/2.)
+            degree = 0
+            scale_size = 1.0
+            if self.random_rotation_ is not None:
+                degree = self.rng_rotation_.uniform(
+                    -self.random_rotation_, self.random_rotation_)
+            if self.random_scale_ is not None:
+                scale_size = self.rng_scale_.uniform(*self.random_scale_)
+            rmat = cv2.getRotationMatrix2D(center, degree, scale_size)
+            img = cv2.warpAffine(
+                img, rmat, img.shape[1::-1], borderMode=border_mode)
         # CROP
         if self.crop_size_ is not None:
             try:
@@ -116,7 +142,7 @@ class ImageTransformer(object):
         # COLOR
         if not self.color_:
             if img.ndim == 3:
-               img = img.mean(2)
+                img = img.mean(2)
             img = img[..., np.newaxis]
             self.logger.debug("transform color")
         # FLOAT
@@ -210,6 +236,7 @@ class ImageDataLayer(BaseDataLayer):
         self.shuffle_ = param.get('shuffle', False)
         self.random_seed_ = param.get('random_seed', 313)
         self.num_thread_ = param.get('num_thread', 8)
+        self.param = param
         with open(self.source_, 'r') as fd:
             self.lines_ = filter(
                 lambda x: x,
