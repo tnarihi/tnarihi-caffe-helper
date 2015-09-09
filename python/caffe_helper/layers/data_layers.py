@@ -57,7 +57,7 @@ class ImageTransformer(object):
                         'random_seed_', 'mirror_', 'crop_size_', 'mean_value_',
                         'scale_', 'color_', 'pad_', 'height_', 'width_',
                         'channel_swap_', 'random_crop_', 'random_scale_',
-                        'random_noise', 'random_rotation',),
+                        'random_noise_', 'random_rotation_',),
                     self.__dict__.iteritems()))))
         c = 3 if self.color_ else 1
         if self.crop_size_ is None:
@@ -74,6 +74,10 @@ class ImageTransformer(object):
         """Check if parameters are set properly."""
         assert self.random_noise_ is None or \
             len(self.random_noise) == 2
+        if self.random_rotation_ == 0:
+            self.random_rotation_ = None
+        if self.random_scale_ == (1, 1):
+            self.random_scale_ = None
 
     @property
     def out_shape(self):
