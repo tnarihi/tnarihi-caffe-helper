@@ -1,4 +1,4 @@
-{% macro image_data_layer(name, phase_train=true, param_str) %}
+{% macro image_data_layer(name, phase_train=true, param_str='{}') %}
 layer {
   name: "{{name}}"
   type: "Python"
