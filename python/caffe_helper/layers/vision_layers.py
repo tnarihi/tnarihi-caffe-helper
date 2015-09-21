@@ -2,6 +2,10 @@ import numpy as np
 
 from caffe import Layer
 
+def _force_c_order_array(x):
+    if x.flags.c_contiguous:
+        return x
+    return x.copy(order='c')
 
 class DownSamplingLayer(Layer):
 
@@ -97,7 +101,7 @@ class MorphologyLayer(Layer):
         import cv2
         for i, img in enumerate(bottom[0].data.transpose(0, 2, 3, 1)):
             imgo = cv2.morphologyEx(
-                img, getattr(cv2, "MORPH_" + self.op_), self.kernel_)
+                _force_c_order_array(img), getattr(cv2, "MORPH_" + self.op_), self.kernel_)
             top[0].data[i, ...] = imgo.transpose(2, 0, 1)
 
     def backward(self, top, propagate_down, bottom):
