@@ -29,6 +29,13 @@ class ImageTransformer(object):
 
     def __init__(self, param):
         self.random_seed_ = param.get('random_seed', 313)
+        envseed = os.environ.get('TNARIHI_CAFFE_HELPER_SEED', None)
+        if envseed is not None:
+            if envseed == 'rand':
+                import time
+                self.random_seed_ = int(time.time())
+            else:
+                self.random_seed_ = int(envseed)
         self.mirror_ = param.get('mirror', False)
         self.crop_size_ = param.get('crop_size', None)
         self.random_crop_ = param.get('random_crop', False)
