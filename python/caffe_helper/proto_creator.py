@@ -1,5 +1,5 @@
 import hashlib
-from os.path import join
+from os.path import join, dirname, abspath
 import caffe_helper as ch
 
 
@@ -138,6 +138,17 @@ class SolverProtoCreator(ProtoCreator):
             com += ["-gpu %d" % gpu]
         return ' '.join(
             com + ['|& tee %s' % (self._kw['snapshot_prefix'] + '.log')])
+
+    def train_command_caffex(self, net_proto, weights=None, gpu=0):
+        com = ["python %s/script/caffex.py train" % abspath(
+            join(dirname(ch.__file__), '..', '..')),
+               "--solver %s" % self.create(net_proto)]
+        if weights is not None:
+            com += ["--weights %s" % weights]
+        if gpu >= 0:
+            com += ["--gpu %d" % gpu]
+        com += ['--log %s' % (self._kw['snapshot_prefix'] + '.log')]
+        return ' '.join(com)
 
 
 def convert_prototxt_template(path_template, path_proto=None, **proto_kw):
