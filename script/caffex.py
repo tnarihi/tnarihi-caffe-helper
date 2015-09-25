@@ -85,12 +85,11 @@ def main():
     cmd = create_command(args, solver, iter_reached)
 
     stdout = sys.stdout
-    if args.log is not None:
-        fd_log = open(args.log, 'a')
-        stdout = Tee(fd_log, sys.stdout)
     print('run:', ' '.join(cmd))
-    subprocess.call(cmd, stdout=stdout)
+    if args.log is not None:
+        subprocess.call(' '.join(cmd) + '|&tee -a {}'.format(args.log), shell=True)
+    else:
+        subprocess.call(' '.join(cmd), shell=True)
 
-    return
 
 main()
