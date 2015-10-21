@@ -9,7 +9,7 @@ import numpy as np
 
 import cv2
 from caffe import Layer
-
+from caffe_helper.rand_seed import seed as ENV_SEED
 
 class ImageTransformer(object):
 
@@ -29,13 +29,8 @@ class ImageTransformer(object):
 
     def __init__(self, param):
         self.random_seed_ = param.get('random_seed', 313)
-        envseed = os.environ.get('TNARIHI_CAFFE_HELPER_SEED', None)
-        if envseed is not None:
-            if envseed == 'rand':
-                import time
-                self.random_seed_ = int(time.time())
-            else:
-                self.random_seed_ = int(envseed)
+        if ENV_SEED is not None:
+            self.random_seed_ = ENV_SEED
         self.mirror_ = param.get('mirror', False)
         self.crop_size_ = param.get('crop_size', None)
         self.random_crop_ = param.get('random_crop', False)
@@ -246,6 +241,8 @@ class ImageDataLayer(BaseDataLayer):
         self.root_ = param.get('root', '')
         self.shuffle_ = param.get('shuffle', False)
         self.random_seed_ = param.get('random_seed', 313)
+        if ENV_SEED is not None:
+            self.random_seed_ = ENV_SEED
         self.num_thread_ = param.get('num_thread', 8)
         self.param = param
         with open(self.source_, 'r') as fd:
@@ -295,6 +292,8 @@ class HDF5Layer(BaseDataLayer):
         self.column_id_ = param.get('column_id_', 0)
         self.shuffle_ = param.get('shuffle', False)
         self.random_seed_ = param.get('random_seed', 313)
+        if ENV_SEED is not None:
+            self.random_seed_ = ENV_SEED
         self.blob_name_ = param['blob_name']
 
         with open(self.source_, 'r') as fd:
@@ -351,6 +350,8 @@ class ScalarDataLayer(BaseDataLayer):
         self.column_id_ = param.get('column_id', 0)
         self.shuffle_ = param.get('shuffle', False)
         self.random_seed_ = param.get('random_seed', 313)
+        if ENV_SEED is not None:
+            self.random_seed_ = ENV_SEED
         with open(self.source_, 'r') as fd:
             self.values_ = filter(
                 lambda x: x,
