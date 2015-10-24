@@ -90,3 +90,69 @@ def test_dssim_layer(request):
     checker = GradientChecker(1e-3, 1e-2)
     checker.check_gradient_exhaustive(
         layer, bottom, top, check_bottom=[0, 1])
+
+
+def test_logit_loss_layer(request):
+    if request.config.getoption('caffe_cpu'):
+        raise pytest.skip("LogitLossLayer requires GPU")
+    # data
+    y = np.random.rand(2, 3, 4, 5)
+    t = (np.random.rand(2, 3, 4, 5) > 0.5).astype(np.float)\
+        - (np.random.rand(2, 3, 4, 5) > 0.5).astype(np.float)
+    # setting up blobs
+    bottom = [caffe.Blob([]), caffe.Blob([])]
+    top = [caffe.Blob([])]
+    bottom[0].reshape(*y.shape)
+    bottom[1].reshape(*t.shape)
+    bottom[0].data[...] = y
+    bottom[1].data[...] = t
+    # Create Layer
+    lp = caffe_pb2.LayerParameter()
+    lp.type = "Python"
+    lp.python_param.module = "caffe_helper.layers.loss_layers"
+    lp.python_param.layer = "LogitLossLayer"
+    layer = caffe.create_layer(lp)
+    layer.SetUp(bottom, top)
+    layer.Reshape(bottom, top)
+    layer.Forward(bottom, top)
+    # reference computation
+    l = np.mean(np.log(1 + np.exp(-y * t)))
+    assert np.isclose(top[0].data, l)
+    checker = GradientChecker(1e-3, 1e-2)
+    checker.check_gradient_exhaustive(
+        layer, bottom, top, check_bottom=[0])
+
+
+def test_crossent_layer(request):
+    if request.config.getoption('caffe_cpu'):
+        raise pytest.skip("crossentropyLossLayer requires GPU")
+    pred = caffe.Blob((5, 8))
+    label = caffe.Blob((5, 1))
+    loss = caffe.Blob([])
+    bottom = [pred, label]
+    top = [loss]
+
+    # Fill
+    rng = np.random.RandomState(313)
+    pred.data[...] = rng.rand(*pred.shape) + 0.1
+    label.data[...] = rng.randint(0, 8, label.shape)
+    pred.data[...] = pred.data / pred.data.sum(axis=1, keepdims=True)
+    # Create Layer
+    lp = caffe_pb2.LayerParameter()
+    lp.type = "Python"
+    lp.python_param.module = "caffe_helper.layers.loss_layers"
+    lp.python_param.layer = "CrossEntropyLossLayer"
+    layer = caffe.create_layer(lp)
+    layer.SetUp(bottom, top)
+    layer.Reshape(bottom, top)
+    layer.Forward(bottom, top)
+    ref = -np.mean(
+        np.log(
+            np.maximum(np.finfo(np.float32).tiny, pred.data)
+        ).reshape(pred.shape[0], -1)[
+            np.arange(pred.shape[0]), label.data.astype('int32')]
+    )
+    assert np.isclose(ref, loss.data)
+    checker = GradientChecker(1e-3, 1e-2)
+    checker.check_gradient_exhaustive(
+        layer, bottom, top, check_bottom=[0])
