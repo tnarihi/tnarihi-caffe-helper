@@ -23,6 +23,26 @@ def pad_with_tblr(img, t, b, l, r,
     img = cv2.copyMakeBorder(img, t, b, l, r,
                              borderType=border_mode)
 
+
+def pad_with_min_shape(img, min_shape, border_mode=cv2.BORDER_CONSTANT,
+                       border_value=0):
+    """"""
+    hh, ww = min_shape
+    h, w = img.shape[:2]
+    if hh <= h and ww <= 3:
+        return img
+    hh, ww = (max(hh, h), max(ww, w))
+    t = int((hh - h) // 2)
+    b = t + int((hh - h) % 2)
+    l = int((ww - w) // 2)
+    r = l + int((ww - w) % 2)
+    if border_mode == cv2.BORDER_CONSTANT:
+        ret = np.ones((hh, ww) + img.shape[2:], img.dtype) * border_value
+        ret[t:t+h, l:l+w, ...] = img
+        return ret
+    return cv2.copyMakeBorder(img, t, b, l, r, border_mode, border_value)
+
+
 class ImageTransformer(object):
 
     logger = getLogger('ImageTransformer')
@@ -53,6 +73,7 @@ class ImageTransformer(object):
         self.scale_ = param.get('scale', None)
         self.color_ = param.get('color', True)
         self.pad_ = param.get('pad', 0)
+        self.pad_ = param.get('minshape', 0)
         self.height_ = param.get('height', -1)
         self.width_ = param.get('width', -1)
         self.channel_swap_ = param.get('channel_swap', None)
@@ -123,6 +144,10 @@ class ImageTransformer(object):
             pad_with_tblr(img, to, bo, le, ri,
                           self.border_mode_, self.border_value_)
             self.logger.debug("transform pad")
+        if self.minshape_ is not None:
+            pad_with_min_shape(img, self.minshape_,
+                               self.border_mode_, self.border_value_)
+
         # ROTATE and/or ROTATE
         if self.random_rotation_ is not None or self.random_scale_ is not None:
             center = tuple(np.array(img.shape[1::-1])/2.)
