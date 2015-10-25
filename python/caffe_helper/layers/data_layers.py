@@ -46,6 +46,7 @@ class ImageTransformer(object):
         self.channel_swap_ = param.get('channel_swap', None)
         self.border_mode_ = getattr(
             cv2, param.get('border_mode', 'BORDER_CONSTANT'))
+        self.float_ = param.get('float', True)
         self.rng_mirror_ = np.random.RandomState(self.random_seed_)
         self.rng_crop_ = np.random.RandomState(self.random_seed_ + 1)
         self.rng_scale_ = np.random.RandomState(self.random_seed_ + 2)
@@ -152,7 +153,8 @@ class ImageTransformer(object):
             img = img[..., np.newaxis]
             self.logger.debug("transform color")
         # FLOAT
-        img = img.astype('float32')
+        if self.float_:
+            img = img.astype('float32')
         # SUBTRACT
         if self.mean_value_ is not None:
             if len(self.mean_value_) in (1, 3):
