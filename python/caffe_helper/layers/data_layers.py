@@ -11,6 +11,18 @@ import cv2
 from caffe import Layer
 from caffe_helper.rand_seed import seed as ENV_SEED
 
+
+def pad_with_tblr(img, t, b, l, r,
+                  border_mode=cv2.BORDER_CONSTANT, border_value=0):
+    if border_mode == cv2.BORDER_CONSTANT:
+        h, w = img.shape[:2]
+        hh, ww = h + t + b, w + l + r
+        ret = np.ones((hh, ww) + img.shape[2:], img.dtype) * border_value
+        ret[t:t+h, l:l+w, ...] = img
+        return ret
+    img = cv2.copyMakeBorder(img, t, b, l, r,
+                             borderType=border_mode)
+
 class ImageTransformer(object):
 
     logger = getLogger('ImageTransformer')
@@ -46,6 +58,7 @@ class ImageTransformer(object):
         self.channel_swap_ = param.get('channel_swap', None)
         self.border_mode_ = getattr(
             cv2, param.get('border_mode', 'BORDER_CONSTANT'))
+        self.border_value_ = param.get('border_value', 0)
         self.float_ = param.get('float', True)
         self.rng_mirror_ = np.random.RandomState(self.random_seed_)
         self.rng_crop_ = np.random.RandomState(self.random_seed_ + 1)
@@ -107,8 +120,8 @@ class ImageTransformer(object):
                     le = ri = leri
                 except:
                     to = bo = le = ri = self.pad_
-            img = cv2.copyMakeBorder(img, to, bo, le, ri,
-                                     borderType=border_mode)
+            pad_with_tblr(img, to, bo, le, ri,
+                          self.border_mode_, self.border_value_)
             self.logger.debug("transform pad")
         # ROTATE and/or ROTATE
         if self.random_rotation_ is not None or self.random_scale_ is not None:
