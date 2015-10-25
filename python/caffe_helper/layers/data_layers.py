@@ -322,6 +322,29 @@ class ImageDataLayer(BaseDataLayer):
             'read a batch takes {} ms'.format(1000 * (time.clock() - tsw)))
 
 
+class MatNdImageDataLayer(ImageDataLayer):
+
+    """Image provider from Matlab .mat files. You must specify `key` option
+    where you will get the data from the matlab file, accessing by:
+    ```
+    img = loadmat(file)[key]
+
+    ```
+
+    This layer is intended to be used for loading n-channel images rather than
+    RGB, RGBA or grayscale images.
+    """
+
+    def _read_image(self, path_img):
+        from scipy.io import loadmat
+        return loadmat(path_img)[self.key_]
+
+    def data_setup(self, bottom, top):
+        super(MatNdImageDataLayer, self).data_setup(bottom, top)
+        param = eval(self.param_str_)
+        self.key_ = param['key']
+
+
 class HDF5Layer(BaseDataLayer):
 
     def data_setup(self, bottom, top):
