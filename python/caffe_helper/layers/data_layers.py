@@ -20,8 +20,8 @@ def pad_with_tblr(img, t, b, l, r,
         ret = np.ones((hh, ww) + img.shape[2:], img.dtype) * border_value
         ret[t:t+h, l:l+w, ...] = img
         return ret
-    img = cv2.copyMakeBorder(img, t, b, l, r,
-                             borderType=border_mode)
+    return cv2.copyMakeBorder(img, t, b, l, r,
+                              borderType=border_mode)
 
 
 def pad_with_min_shape(img, min_shape, border_mode=cv2.BORDER_CONSTANT,
@@ -29,7 +29,7 @@ def pad_with_min_shape(img, min_shape, border_mode=cv2.BORDER_CONSTANT,
     """"""
     hh, ww = min_shape
     h, w = img.shape[:2]
-    if hh <= h and ww <= 3:
+    if hh <= h and ww <= w:
         return img
     hh, ww = (max(hh, h), max(ww, w))
     t = int((hh - h) // 2)
@@ -73,7 +73,7 @@ class ImageTransformer(object):
         self.scale_ = param.get('scale', None)
         self.color_ = param.get('color', True)
         self.pad_ = param.get('pad', 0)
-        self.pad_ = param.get('minshape', 0)
+        self.minshape_ = param.get('minshape', 0)
         self.height_ = param.get('height', -1)
         self.width_ = param.get('width', -1)
         self.channel_swap_ = param.get('channel_swap', None)
@@ -322,10 +322,12 @@ class ImageDataLayer(BaseDataLayer):
             'read a batch takes {} ms'.format(1000 * (time.clock() - tsw)))
 
 
-class MatNdImageDataLayer(ImageDataLayer):
+class MatNcImageDataLayer(ImageDataLayer):
 
-    """Image provider from Matlab .mat files. You must specify `key` option
-    where you will get the data from the matlab file, accessing by:
+    """Image provider from Matlab .mat n-channel image files. You must specify
+    `key` option where you will get the data from the matlab file, accessing
+    by:
+
     ```
     img = loadmat(file)[key]
 
@@ -337,12 +339,19 @@ class MatNdImageDataLayer(ImageDataLayer):
 
     def _read_image(self, path_img):
         from scipy.io import loadmat
-        return loadmat(path_img)[self.key_]
+        ret = loadmat(path_img)[self.key_]
+        if not self.is_initialized_:
+            self.is_initialized_ = True
+            self.data_ = np.zeros((
+                self.batch_size_, ret.shape[-1],) +
+                self.transformer_.out_shape[1:], dtype='float32')
+        return ret
 
     def data_setup(self, bottom, top):
-        super(MatNdImageDataLayer, self).data_setup(bottom, top)
+        super(MatNcImageDataLayer, self).data_setup(bottom, top)
         param = eval(self.param_str_)
         self.key_ = param['key']
+        self.is_initialized_ = False
 
 
 class HDF5Layer(BaseDataLayer):
