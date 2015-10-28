@@ -116,7 +116,7 @@ def test_logit_loss_layer(request):
     layer.Reshape(bottom, top)
     layer.Forward(bottom, top)
     # reference computation
-    l = np.mean(np.log(1 + np.exp(-y * t)))
+    l = np.sum(np.abs(t) * np.log(1 + np.exp(-y * t))) / np.sum(np.abs(t))
     assert np.isclose(top[0].data, l)
     checker = GradientChecker(1e-3, 1e-2)
     checker.check_gradient_exhaustive(

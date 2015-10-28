@@ -251,7 +251,9 @@ class DSSIMLayer(Layer):
         bottom[0].diff[...] *= top[0].diff
         bottom[1].diff[...] *= top[0].diff
 
+
 class LogitLossLayer(Layer):
+
     """
     bottoms:
         y : (N x ....) in R, scores
@@ -259,6 +261,7 @@ class LogitLossLayer(Layer):
     tops:
         l : (0) loss
     """
+
     def setup(self, bottom, top):
         from caffe_helper.theano_util import init_theano
         init_theano()
@@ -267,18 +270,27 @@ class LogitLossLayer(Layer):
         import theano.tensor as T
         assert len(bottom) == 2
         assert len(top) == 1
-        s_y = T.matrix('y')
-        s_t = T.matrix('t')
+        s_y = T.matrix('y')  # y in [-inf, inf]
+        s_t = T.matrix('t')  # t in {-1, 0, 1} where 0 is ignored
         s_dloss = T.scalar('dloss')
-        s_loss = T.mean(T.log(1 + T.exp(-s_y * s_t)))
-        s_dy = tn.grad(s_loss * s_dloss, s_y)
+        # Forward
+        # s_loss = T.mean(abs(s_t) * T.log1p(T.exp(-s_y * s_t)))  # unstable
+        s_loss = -T.sum(
+            abs(s_t) * (
+                s_y * ((s_t >= 0) - (s_y >= 0)) - T.log1p(T.exp(-abs(s_y)))))\
+            / T.sum(abs(s_t))
+        # Backward
+        s_p = 1 / (1 + T.exp(-s_y))
+        s_dy = s_dloss * abs(s_t) * (s_p - (s_t >= 0)) / T.sum(abs(s_t))
+
         def _o(s):
             return tn.Out(s, borrow=True)
-        self.tn_forward = tn.function([s_y, s_t], _o(s_loss))
+        self.tn_forward = tn.function([s_y, s_t], s_loss)
         self.tn_backward = tn.function([s_y, s_t, s_dloss], _o(s_dy))
 
     def reshape(self, bottom, top):
-        assert bottom[0].shape == bottom[1].shape
+        assert bottom[0].shape == bottom[1].shape, \
+            "{} == {}".format(tuple(bottom[0].shape), tuple(bottom[1].shape))
         top[0].reshape()
 
     def forward(self, bottom, top):
@@ -287,7 +299,7 @@ class LogitLossLayer(Layer):
         t, _ = blob_to_CudaNdArray(bottom[1])
         l, _ = blob_to_CudaNdArray(top[0])
         s = (y.shape[0], int(np.prod(y.shape[1:])))
-        l[...] = self.tn_forward(y.reshape(s), t.reshape(s)).reshape(l.shape)
+        l[...] = self.tn_forward(y.reshape(s), t.reshape(s))
 
     def backward(self, top, propagate_down, bottom):
         from caffe_helper.theano_util import blob_to_CudaNdArray
@@ -295,12 +307,15 @@ class LogitLossLayer(Layer):
         t, _ = blob_to_CudaNdArray(bottom[1])
         _, dl = blob_to_CudaNdArray(top[0])
         s = (y.shape[0], int(np.prod(y.shape[1:])))
-        dy[...] = self.tn_backward(y.reshape(s), t.reshape(s), dl).reshape(dy.shape)
-        
+        dy[...] = self.tn_backward(
+            y.reshape(s), t.reshape(s), dl).reshape(dy.shape)
+
 
 class CrossEntropyLossLayer(Layer):
+
     """Unlike SoftmaxLoss Layer, this layer assumes the input is already
     normalized probability"""
+
     def setup(self, bottom, top):
         self.reshape(bottom, top)
         from caffe_helper.theano_util import init_theano
@@ -318,7 +333,7 @@ class CrossEntropyLossLayer(Layer):
         s_l = -T.mean(
             T.log(T.maximum(FLTMIN, s_p.flatten(2)))[
                 T.arange(s_t.shape[0]), T.cast(s_t, 'int32')]
-            )
+        )
         self.f_forward = tn.function(
             [s_p, s_t], tn.Out(s_l, borrow=True))
 
