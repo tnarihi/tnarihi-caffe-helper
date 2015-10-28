@@ -340,19 +340,17 @@ class MatNcImageDataLayer(ImageDataLayer):
 
     def _read_image(self, path_img):
         from scipy.io import loadmat
-        ret = loadmat(path_img)[self.key_]
-        if not self.is_initialized_:
-            self.is_initialized_ = True
-            self.data_ = np.zeros((
-                self.batch_size_, ret.shape[-1],) +
-                self.transformer_.out_shape[1:], dtype='float32')
-        return ret
+        return loadmat(path_img)[self.key_]
 
     def data_setup(self, bottom, top):
         super(MatNcImageDataLayer, self).data_setup(bottom, top)
         param = eval(self.param_str_)
         self.key_ = param['key']
-        self.is_initialized_ = False
+        from scipy.io import loadmat
+        l = loadmat(self.root_ + self.lines_[0])[self.key_]
+        self.data_ = np.zeros((
+            self.batch_size_, l.shape[-1],) +
+            self.transformer_.out_shape[1:], dtype='float32')
 
 
 class HDF5Layer(BaseDataLayer):
