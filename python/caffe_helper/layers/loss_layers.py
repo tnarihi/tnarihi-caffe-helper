@@ -278,10 +278,10 @@ class LogitLossLayer(Layer):
         s_loss = -T.sum(
             abs(s_t) * (
                 s_y * ((s_t >= 0) - (s_y >= 0)) - T.log1p(T.exp(-abs(s_y)))))\
-            / T.sum(abs(s_t))
+            / T.maximum(T.sum(abs(s_t)), 1)
         # Backward
         s_p = 1 / (1 + T.exp(-s_y))
-        s_dy = s_dloss * abs(s_t) * (s_p - (s_t >= 0)) / T.sum(abs(s_t))
+        s_dy = s_dloss * abs(s_t) * (s_p - (s_t >= 0)) / T.maximum(T.sum(abs(s_t)), 1)
 
         def _o(s):
             return tn.Out(s, borrow=True)
