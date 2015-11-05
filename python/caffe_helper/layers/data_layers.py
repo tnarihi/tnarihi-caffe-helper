@@ -146,7 +146,7 @@ class ImageTransformer(object):
                           self.border_mode_, self.border_value_)
             self.logger.debug("transform pad")
         if self.minshape_ is not None:
-            pad_with_min_shape(img, self.minshape_,
+            img = pad_with_min_shape(img, self.minshape_,
                                self.border_mode_, self.border_value_)
 
         # ROTATE and/or ROTATE
