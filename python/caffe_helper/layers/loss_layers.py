@@ -312,6 +312,51 @@ class LogitLossLayer(Layer):
             y.reshape(s), t.reshape(s), dl).reshape(dy.shape)
 
 
+class BinaryAccuracyLayer(Layer):
+
+    """
+    bottoms:
+        y : (N x ....) in R, scores
+        t : (N x ....) in [-1, 0, 1], targets, target 0 ignoring the data
+    tops:
+        l : (0) loss
+    """
+
+    def setup(self, bottom, top):
+        from caffe_helper.theano_util import init_theano
+        init_theano()
+
+        import theano as tn
+        import theano.tensor as T
+        assert len(bottom) == 2
+        assert len(top) == 1
+        s_y = T.matrix('y')  # y in [-inf, inf]
+        s_t = T.matrix('t')  # t in {-1, 0, 1} where 0 is ignored
+        # Forward
+        s_loss = T.sum(abs(s_t) * T.eq((s_y >= 0), (s_t >= 0))) \
+            / T.maximum(T.sum(abs(s_t)), 1)
+
+        def _o(s):
+            return tn.Out(s, borrow=True)
+        self.tn_forward = tn.function([s_y, s_t], _o(s_loss))
+
+    def reshape(self, bottom, top):
+        assert bottom[0].shape == bottom[1].shape, \
+            "{} == {}".format(tuple(bottom[0].shape), tuple(bottom[1].shape))
+        top[0].reshape()
+
+    def forward(self, bottom, top):
+        from caffe_helper.theano_util import blob_to_CudaNdArray
+        y, _ = blob_to_CudaNdArray(bottom[0])
+        t, _ = blob_to_CudaNdArray(bottom[1])
+        l, _ = blob_to_CudaNdArray(top[0])
+        s = (y.shape[0], int(np.prod(y.shape[1:])))
+        l[...] = self.tn_forward(y.reshape(s), t.reshape(s))
+
+    def backward(self, top, propagate_down, bottom):
+        pass
+
+
 class CrossEntropyLossLayer(Layer):
 
     """Unlike SoftmaxLoss Layer, this layer assumes the input is already
