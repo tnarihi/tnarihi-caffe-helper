@@ -144,8 +144,6 @@ def train(args, solver, iter_reached):
             print("Reached to time limit: taking snapshot...")
             s.snapshot()
             sys.exit(0)
-        if s.iter % solver.test_interval == 0:
-            s.test_all()
     else:
         print("Reached to max_iter: taking snapshot...")
         s.snapshot()
